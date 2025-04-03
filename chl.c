@@ -75,6 +75,10 @@ static inline uint64_t rev_bytes_64(uint64_t x) {
 #  define be64(x) ((uint64_t)(x))
 #endif
 
+#define apply_to(arr, size, op) \
+for (size_t macroi = 0; macroi < size; macroi++) \
+    (arr)[macroi] = op((arr)[macroi])
+
 /* Bit rotations */
 
 static inline uint32_t rotl32(uint32_t n, int s) { return n << s | n >> (32 - s); }
@@ -191,6 +195,57 @@ chl_crc32c_ret_t chl_crc32c_base(stm_t* stm) {
     return ~hash;
 }
 
+chl_sha1_ret_t chl_sha1_base(stm_t* stm) {
+    uint32_t hs[5] = {
+        0x67452301, 0xEFCDAB89, 0x98BADCFE,
+        0x10325476, 0xC3D2E1F0
+    };
+
+    bool has_next_block     = true;
+    bool need_paste_one_bit = true;
+    size_t all_len = 0, read_len;
+    while (stm_has(stm) || has_next_block) {
+        uint32_t w[80] = {0};
+        all_len += (read_len = stm_read_block(stm, w, 64));
+
+        if (read_len < 64 && need_paste_one_bit) {
+            *((uint8_t*)w + read_len) = 128;
+            need_paste_one_bit = false;
+        }
+        if (read_len < 56) {
+            *((uint64_t*)w + 7) = be64(all_len * 8);
+            has_next_block = false;
+        }
+
+        apply_to(w, 16, be32);
+        for (size_t i = 16; i < 80; i++)
+            w[i] = rotl32(w[i-3] ^ w[i-8] ^ w[i-14] ^ w[i-16], 1);
+
+        uint32_t a = hs[0], b = hs[1], c = hs[2], d = hs[3], e = hs[4];
+        for (size_t i = 0; i < 80; i++) {
+            uint32_t f, k;
+            if (i < 20) {
+                k = 0x5A827999; f = (b & c) | (~b & d);
+            } else if (20 <= i && i < 40) {
+                k = 0x6ED9EBA1; f = b ^ c ^ d;
+            } else if (40 <= i && i < 60) {
+                k = 0x8F1BBCDC; f = (b & c) ^ (b & d) ^ (c & d);
+            } else {
+                k = 0xCA62C1D6; f = b ^ c ^ d;
+            }
+
+            uint32_t t = rotl32(a, 5) + f + e + k + w[i];
+            e = d; d = c; c = rotl32(b, 30); b = a; a = t;
+        }
+        hs[0] += a, hs[1] += b, hs[2] += c, hs[3] += d, hs[4] += e;
+    }
+
+    apply_to(hs, 5, be32);
+    chl_sha1_ret_t hash = {0};
+    memcpy(hash.array, hs, sizeof hs);
+    return hash;
+}
+
 static void siphash_2_4_round(uint64_t* vs) {
     vs[0] += vs[1]; vs[2] += vs[3];
     vs[1]  = rotl64(vs[1], 13);
@@ -223,12 +278,14 @@ chl_siphash_2_4_ret_t chl_siphash_2_4_base(stm_t* stm, chl_array_128b_t key) {
         uint64_t mi = 0;
         all_len += (read_len =
             stm_read_block(stm, &mi, sizeof mi)
-        ); mi = le64(mi);
+        );
 
         if (read_len < 8) {
-            mi |= ((uint64_t)all_len & 255) << 56;
+            *((uint8_t*)(&mi) + 7) = all_len & 255;
             has_next_block = false;
         }
+
+        mi = le64(mi);
 
         vs[3] ^= mi;
         siphash_2_4_round(vs);
