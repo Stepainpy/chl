@@ -25,14 +25,9 @@ static bool stm_has(stm_t* stm) {
 }
 
 static uint8_t stm_read_byte(stm_t* stm) {
-    uint8_t res;
-    if (stm_is_file(stm)) {
-        fread(&res, 1, 1, stm->ptr.file);
-    } else {
-        res = *stm->ptr.data++;
-        --stm->count;
-    }
-    return res;
+    if (stm_is_file(stm))
+        return getc(stm->ptr.file);
+    return (--stm->count, *stm->ptr.data++);
 }
 
 static size_t stm_read_block(stm_t* stm, void* dest, size_t count) {
