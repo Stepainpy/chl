@@ -195,6 +195,59 @@ chl_crc32c_ret_t chl_crc32c_base(stm_t* stm) {
     return ~hash;
 }
 
+chl_md5_ret_t chl_md5_base(stm_t* stm) {
+    uint32_t hs[4] = {
+        0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476
+    };
+
+    bool has_next_block     = true;
+    bool need_paste_one_bit = true;
+    size_t all_len = 0, read_len;
+    while (stm_has(stm) || has_next_block) {
+        uint32_t w[16] = {0};
+        all_len += (read_len = stm_read_block(stm, w, 64));
+
+        if (read_len < 64 && need_paste_one_bit) {
+            *((uint8_t*)w + read_len) = 128;
+            need_paste_one_bit = false;
+        }
+        if (read_len < 56) {
+            *((uint64_t*)w + 7) = le64(all_len * 8);
+            has_next_block = false;
+        }
+
+        apply_to(w, 16, le32);
+
+        uint32_t a = hs[0], b = hs[1], c = hs[2], d = hs[3];
+        for (size_t i = 0; i < 64; i++) {
+            uint32_t f, g;
+            if (i < 16) {
+                f = (b & c) | (~b & d);
+                g = i;
+            } else if (16 <= i && i < 32) {
+                f = (d & b) | (~d & c);
+                g = (5 * i + 1) % 16;
+            } else if (32 <= i && i < 48) {
+                f = b ^ c ^ d;
+                g = (3 * i + 5) % 16;
+            } else {
+                f = c ^ (b | ~d);
+                g = (7 * i) % 16;
+            }
+
+            f += a + md5_k[i] + w[g];
+            a = d; d = c; c = b;
+            b += rotl32(f, md5_s[i]);
+        }
+        hs[0] += a; hs[1] += b; hs[2] += c; hs[3] += d;
+    }
+
+    apply_to(hs, 4, le32);
+    chl_md5_ret_t hash = {0};
+    memcpy(hash.array, hs, sizeof hash);
+    return hash;
+}
+
 chl_sha1_ret_t chl_sha1_base(stm_t* stm) {
     uint32_t hs[5] = {
         0x67452301, 0xEFCDAB89, 0x98BADCFE,

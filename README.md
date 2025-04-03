@@ -9,6 +9,7 @@ Non-Cryptographic functions:
 - `pjw-(32/64)`
 - `fnv1[a]-(32/64)`
 - `crc32(b/c)`
+- `md5`
 - `sha1`
 
 Cryptographic functions:
