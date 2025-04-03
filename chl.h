@@ -11,21 +11,21 @@
  *   then hash is array = { 0x2f, 0xd4, 0xe1, ..., 0x93, 0xeb, 0x12 }
  */
 
-typedef struct chl_array_128b_t {
+typedef struct chl_128bit_t {
     uint8_t array[16];
-} chl_array_128b_t;
+} chl_128bit_t;
 
-typedef struct chl_array_160b_t {
+typedef struct chl_160bit_t {
     uint8_t array[20];
-} chl_array_160b_t;
+} chl_160bit_t;
 
-typedef struct chl_array_224b_t {
+typedef struct chl_224bit_t {
     uint8_t array[28];
-} chl_array_224b_t;
+} chl_224bit_t;
 
-typedef struct chl_array_256b_t {
+typedef struct chl_256bit_t {
     uint8_t array[32];
-} chl_array_256b_t;
+} chl_256bit_t;
 
 /* DO:
  * name of function
@@ -42,9 +42,9 @@ DO(fnv1_64,  uint64_t) \
 DO(fnv1a_64, uint64_t) \
 DO(crc32b,   uint32_t) \
 DO(crc32c,   uint32_t) \
-DO(sha1,     chl_array_160b_t) \
-DO(sha2_224, chl_array_224b_t) \
-DO(sha2_256, chl_array_256b_t) \
+DO(sha1,     chl_160bit_t) \
+DO(sha2_224, chl_224bit_t) \
+DO(sha2_256, chl_256bit_t) \
 
 /* DO:
  * name of function
@@ -54,7 +54,7 @@ DO(sha2_256, chl_array_256b_t) \
  */
 
 #define CHL_LIST_OF_NAMES_WITH_KEY \
-DO(siphash_2_4, uint64_t, chl_array_128b_t, le_key) \
+DO(siphash_2_4, uint64_t, chl_128bit_t, le_key) \
 
 #define CHLN_RET_T(bn)    chl_ ## bn ## _ret_t
 #define CHLN_FUNC(bn, fn) chl_ ## bn ## _ ## fn

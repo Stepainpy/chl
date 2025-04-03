@@ -368,7 +368,7 @@ static void siphash_2_4_round(uint64_t* vs) {
     vs[2]  = rotl64(vs[2], 32);
 }
 
-chl_siphash_2_4_ret_t chl_siphash_2_4_base(stm_t* stm, chl_array_128b_t key) {
+chl_siphash_2_4_ret_t chl_siphash_2_4_base(stm_t* stm, chl_128bit_t key) {
     uint64_t* keypair = (uint64_t*)&(key.array);
     keypair[0] = le64(keypair[0]);
     keypair[1] = le64(keypair[1]);
