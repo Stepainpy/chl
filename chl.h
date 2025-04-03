@@ -31,6 +31,8 @@ DO(fnv1_32,     uint32_t, 0, , ) \
 DO(fnv1a_32,    uint32_t, 0, , ) \
 DO(fnv1_64,     uint64_t, 0, , ) \
 DO(fnv1a_64,    uint64_t, 0, , ) \
+DO(crc32b,      uint32_t, 0, , ) \
+DO(crc32c,      uint32_t, 0, , ) \
 DO(siphash_2_4, uint64_t, 1, chl_array_128b_t, le_key) \
 
 #define CHLN_RET_T(bn)    chl_ ## bn ## _ret_t

@@ -8,6 +8,7 @@ Non-Cryptographic functions:
 - `djb2`
 - `pjw-(32/64)`
 - `fnv1[a]-(32/64)`
+- `crc32(b/c)`
 
 Cryptographic functions:
 - `siphash-2-4`
