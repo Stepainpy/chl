@@ -9,8 +9,6 @@ typedef struct stm_t {
     size_t count; // if count == SIZE_MAX => ptr is file, otherwise is slice
 } stm_t;
 
-#define stm_def_from_file(fd)   (stm_t){ .count = SIZE_MAX, .ptr.file = fd }
-#define stm_def_from_span(p, l) (stm_t){ .count = l,        .ptr.data = p  }
 #define stm_is_file(stmp) ((stmp)->count == SIZE_MAX)
 
 static int fpeek(FILE* file) {
@@ -88,11 +86,11 @@ static inline uint64_t rotr64(uint64_t n, int s) { return n >> s | n << (64 - s)
 #define DO(name, ret, hasext, etype, ename) \
 static ret CHLN_FUNC(name, base)(stm_t* stm CHLPP_IF(hasext, CHLPP_COMMA) etype ename); \
 ret CHLN_FUNC(name, calc)(const void* source, size_t length CHLPP_IF(hasext, CHLPP_COMMA) etype ename) { \
-    stm_t stm = stm_def_from_span(source, length); \
+    stm_t stm; stm.ptr.data = source; stm.count = length; \
     return CHLN_FUNC(name, base)(&stm CHLPP_IF(hasext, CHLPP_COMMA) ename); \
 } \
 ret CHLN_FUNC(name, calc_file)(FILE* src_file CHLPP_IF(hasext, CHLPP_COMMA) etype ename) { \
-    stm_t stm = stm_def_from_file(src_file); \
+    stm_t stm; stm.ptr.file = src_file; stm.count = SIZE_MAX; \
     return CHLN_FUNC(name, base)(&stm CHLPP_IF(hasext, CHLPP_COMMA) ename); \
 }
 CHL_LIST_OF_NAMES
