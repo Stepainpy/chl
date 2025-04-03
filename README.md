@@ -13,6 +13,7 @@ Non-Cryptographic functions:
 
 Cryptographic functions:
 - `siphash-2-4`
+- `sha2-(224/256)`
 
 ## Basic API
 

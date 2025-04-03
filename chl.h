@@ -19,6 +19,14 @@ typedef struct chl_array_160b_t {
     uint8_t array[20];
 } chl_array_160b_t;
 
+typedef struct chl_array_224b_t {
+    uint8_t array[28];
+} chl_array_224b_t;
+
+typedef struct chl_array_256b_t {
+    uint8_t array[32];
+} chl_array_256b_t;
+
 /* DO:
  * name of function
  * return type
@@ -35,6 +43,8 @@ DO(fnv1a_64, uint64_t) \
 DO(crc32b,   uint32_t) \
 DO(crc32c,   uint32_t) \
 DO(sha1,     chl_array_160b_t) \
+DO(sha2_224, chl_array_224b_t) \
+DO(sha2_256, chl_array_256b_t) \
 
 /* DO:
  * name of function

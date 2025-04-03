@@ -246,6 +246,114 @@ chl_sha1_ret_t chl_sha1_base(stm_t* stm) {
     return hash;
 }
 
+chl_sha2_224_ret_t chl_sha2_224_base(stm_t* stm) {
+    uint32_t hs[8] = {
+        0xc1059ed8, 0x367cd507, 0x3070dd17, 0xf70e5939,
+        0xffc00b31, 0x68581511, 0x64f98fa7, 0xbefa4fa4
+    };
+
+    bool has_next_block     = true;
+    bool need_paste_one_bit = true;
+    size_t all_len = 0, read_len;
+    while (stm_has(stm) || has_next_block) {
+        uint32_t w[64] = {0};
+        all_len += (read_len = stm_read_block(stm, w, 64));
+
+        if (read_len < 64 && need_paste_one_bit) {
+            *((uint8_t*)w + read_len) = 128;
+            need_paste_one_bit = false;
+        }
+        if (read_len < 56) {
+            *((uint64_t*)w + 7) = be64(all_len * 8);
+            has_next_block = false;
+        }
+
+        apply_to(w, 16, be32);
+        for (size_t i = 16; i < 64; i++) {
+            uint32_t s0 = rotr32(w[i-15], 7) ^ rotr32(w[i-15], 18) ^ (w[i-15] >> 3);
+            uint32_t s1 = rotr32(w[i-2], 17) ^ rotr32(w[i-2],  19) ^ (w[i-2] >> 10);
+            w[i] = w[i-16] +s0 + w[i-7] + s1;
+        }
+
+        uint32_t a, b, c, d, e, f, g, h;
+        a = hs[0]; b = hs[1]; c = hs[2]; d = hs[3];
+        e = hs[4]; f = hs[5]; g = hs[6]; h = hs[7];
+        for (size_t i = 0; i < 64; i++) {
+            uint32_t s0, s1, ch, ma, t1, t2;
+            s0 = rotr32(a, 2) ^ rotr32(a, 13) ^ rotr32(a, 22);
+            s1 = rotr32(e, 6) ^ rotr32(e, 11) ^ rotr32(e, 25);
+            ma = (a & b) ^ (a & c) ^ (b & c);
+            ch = (e & f) ^ (~e & g);
+            t1 = h + s1 + ch + sha2_224_256_k[i] + w[i];
+            t2 = s0 + ma;
+
+            h = g; g = f; f = e; e = t1 + d;
+            d = c; c = b; b = a; a = t1 + t2;
+        }
+        hs[0] += a; hs[1] += b; hs[2] += c; hs[3] += d;
+        hs[4] += e; hs[5] += f; hs[6] += g; hs[7] += h;
+    }
+    
+    apply_to(hs, 7, be32);
+    chl_sha2_224_ret_t hash = {0};
+    memcpy(hash.array, hs, sizeof hs - sizeof hs[7]);
+    return hash;
+}
+
+chl_sha2_256_ret_t chl_sha2_256_base(stm_t* stm) {
+    uint32_t hs[8] = {
+        0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
+        0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
+    };
+
+    bool has_next_block     = true;
+    bool need_paste_one_bit = true;
+    size_t all_len = 0, read_len;
+    while (stm_has(stm) || has_next_block) {
+        uint32_t w[64] = {0};
+        all_len += (read_len = stm_read_block(stm, w, 64));
+
+        if (read_len < 64 && need_paste_one_bit) {
+            *((uint8_t*)w + read_len) = 128;
+            need_paste_one_bit = false;
+        }
+        if (read_len < 56) {
+            *((uint64_t*)w + 7) = be64(all_len * 8);
+            has_next_block = false;
+        }
+
+        apply_to(w, 16, be32);
+        for (size_t i = 16; i < 64; i++) {
+            uint32_t s0 = rotr32(w[i-15], 7) ^ rotr32(w[i-15], 18) ^ (w[i-15] >> 3);
+            uint32_t s1 = rotr32(w[i-2], 17) ^ rotr32(w[i-2],  19) ^ (w[i-2] >> 10);
+            w[i] = w[i-16] +s0 + w[i-7] + s1;
+        }
+
+        uint32_t a, b, c, d, e, f, g, h;
+        a = hs[0]; b = hs[1]; c = hs[2]; d = hs[3];
+        e = hs[4]; f = hs[5]; g = hs[6]; h = hs[7];
+        for (size_t i = 0; i < 64; i++) {
+            uint32_t s0, s1, ch, ma, t1, t2;
+            s0 = rotr32(a, 2) ^ rotr32(a, 13) ^ rotr32(a, 22);
+            s1 = rotr32(e, 6) ^ rotr32(e, 11) ^ rotr32(e, 25);
+            ma = (a & b) ^ (a & c) ^ (b & c);
+            ch = (e & f) ^ (~e & g);
+            t1 = h + s1 + ch + sha2_224_256_k[i] + w[i];
+            t2 = s0 + ma;
+
+            h = g; g = f; f = e; e = t1 + d;
+            d = c; c = b; b = a; a = t1 + t2;
+        }
+        hs[0] += a; hs[1] += b; hs[2] += c; hs[3] += d;
+        hs[4] += e; hs[5] += f; hs[6] += g; hs[7] += h;
+    }
+    
+    apply_to(hs, 8, be32);
+    chl_sha2_256_ret_t hash = {0};
+    memcpy(hash.array, hs, sizeof hs);
+    return hash;
+}
+
 static void siphash_2_4_round(uint64_t* vs) {
     vs[0] += vs[1]; vs[2] += vs[3];
     vs[1]  = rotl64(vs[1], 13);
