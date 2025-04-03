@@ -6,7 +6,7 @@
 
 typedef struct stm_t {
     union { const uint8_t* data; FILE* file; } ptr;
-    size_t count; // if count == SIZE_MAX => ptr is file, otherwise is slice
+    size_t count; // if count == SIZE_MAX then ptr is file, otherwise is span
 } stm_t;
 
 #define stm_is_file(stmp) ((stmp)->count == SIZE_MAX)
@@ -83,17 +83,30 @@ static inline uint64_t rotr64(uint64_t n, int s) { return n >> s | n << (64 - s)
 
 /* Defining `calc` and `calc_file` as versions of `base` */
 
-#define DO(name, ret, hasext, etype, ename) \
-static ret CHLN_FUNC(name, base)(stm_t* stm CHLPP_IF(hasext, CHLPP_COMMA) etype ename); \
-ret CHLN_FUNC(name, calc)(const void* source, size_t length CHLPP_IF(hasext, CHLPP_COMMA) etype ename) { \
+#define DO(name, ret) \
+static ret CHLN_FUNC(name, base)(stm_t* stm); \
+ret CHLN_FUNC(name, calc)(const void* source, size_t length) { \
     stm_t stm; stm.ptr.data = source; stm.count = length; \
-    return CHLN_FUNC(name, base)(&stm CHLPP_IF(hasext, CHLPP_COMMA) ename); \
+    return CHLN_FUNC(name, base)(&stm); \
 } \
-ret CHLN_FUNC(name, calc_file)(FILE* src_file CHLPP_IF(hasext, CHLPP_COMMA) etype ename) { \
+ret CHLN_FUNC(name, calc_file)(FILE* src_file) { \
     stm_t stm; stm.ptr.file = src_file; stm.count = SIZE_MAX; \
-    return CHLN_FUNC(name, base)(&stm CHLPP_IF(hasext, CHLPP_COMMA) ename); \
+    return CHLN_FUNC(name, base)(&stm); \
 }
 CHL_LIST_OF_NAMES
+#undef DO
+
+#define DO(name, ret, ktype, kname) \
+static ret CHLN_FUNC(name, base)(stm_t* stm, ktype kname); \
+ret CHLN_FUNC(name, calc)(const void* source, size_t length, ktype kname) { \
+    stm_t stm; stm.ptr.data = source; stm.count = length; \
+    return CHLN_FUNC(name, base)(&stm, kname); \
+} \
+ret CHLN_FUNC(name, calc_file)(FILE* src_file, ktype kname) { \
+    stm_t stm; stm.ptr.file = src_file; stm.count = SIZE_MAX; \
+    return CHLN_FUNC(name, base)(&stm, kname); \
+}
+CHL_LIST_OF_NAMES_WITH_KEY
 #undef DO
 
 chl_djb2_ret_t chl_djb2_base(stm_t* stm) {
