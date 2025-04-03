@@ -86,32 +86,29 @@ static inline uint64_t rotr64(uint64_t n, int s) { return n >> s | n << (64 - s)
 /* Defining `calc` and `calc_file` as versions of `base` */
 
 #define DO(name, ret, hasext, etype, ename) \
-static ret CHLN_FUNC(name, base)(stm_t stm \
-    CHLPP_IF(hasext, CHLPP_COMMA) etype ename); \
-ret CHLN_FUNC(name, calc)(const void* source, size_t length \
-    CHLPP_IF(hasext, CHLPP_COMMA) etype ename) { \
-    return CHLN_FUNC(name, base)(stm_def_from_span(source, length) \
-        CHLPP_IF(hasext, CHLPP_COMMA) ename); \
+static ret CHLN_FUNC(name, base)(stm_t* stm CHLPP_IF(hasext, CHLPP_COMMA) etype ename); \
+ret CHLN_FUNC(name, calc)(const void* source, size_t length CHLPP_IF(hasext, CHLPP_COMMA) etype ename) { \
+    stm_t stm = stm_def_from_span(source, length); \
+    return CHLN_FUNC(name, base)(&stm CHLPP_IF(hasext, CHLPP_COMMA) ename); \
 } \
-ret CHLN_FUNC(name, calc_file)(FILE* src_file \
-    CHLPP_IF(hasext, CHLPP_COMMA) etype ename) { \
-    return CHLN_FUNC(name, base)(stm_def_from_file(src_file) \
-        CHLPP_IF(hasext, CHLPP_COMMA) ename); \
+ret CHLN_FUNC(name, calc_file)(FILE* src_file CHLPP_IF(hasext, CHLPP_COMMA) etype ename) { \
+    stm_t stm = stm_def_from_file(src_file); \
+    return CHLN_FUNC(name, base)(&stm CHLPP_IF(hasext, CHLPP_COMMA) ename); \
 }
 CHL_LIST_OF_NAMES
 #undef DO
 
-chl_djb2_ret_t chl_djb2_base(stm_t stm) {
+chl_djb2_ret_t chl_djb2_base(stm_t* stm) {
     chl_djb2_ret_t hash = 5381;
-    while (stm_has(&stm))
-        hash = ((hash << 5) + hash) + stm_read_byte(&stm);
+    while (stm_has(stm))
+        hash = ((hash << 5) + hash) + stm_read_byte(stm);
     return hash;
 }
 
-chl_pjw32_ret_t chl_pjw32_base(stm_t stm) {
+chl_pjw32_ret_t chl_pjw32_base(stm_t* stm) {
     chl_pjw32_ret_t hash = 0, high;
-    while (stm_has(&stm)) {
-        hash = (hash << 4) + stm_read_byte(&stm);
+    while (stm_has(stm)) {
+        hash = (hash << 4) + stm_read_byte(stm);
         if ((high = hash & 0xf0000000)) {
             hash ^= high >> 24;
             hash &= ~high;
@@ -120,10 +117,10 @@ chl_pjw32_ret_t chl_pjw32_base(stm_t stm) {
     return hash;
 }
 
-chl_pjw64_ret_t chl_pjw64_base(stm_t stm) {
+chl_pjw64_ret_t chl_pjw64_base(stm_t* stm) {
     chl_pjw64_ret_t hash = 0, high;
-    while (stm_has(&stm)) {
-        hash = (hash << 8) + stm_read_byte(&stm);
+    while (stm_has(stm)) {
+        hash = (hash << 8) + stm_read_byte(stm);
         if ((high = hash & 0xff00000000000000)) {
             hash ^= high >> 48;
             hash &= ~high;
@@ -132,37 +129,37 @@ chl_pjw64_ret_t chl_pjw64_base(stm_t stm) {
     return hash;
 }
 
-chl_fnv1_32_ret_t chl_fnv1_32_base(stm_t stm) {
+chl_fnv1_32_ret_t chl_fnv1_32_base(stm_t* stm) {
     chl_fnv1_32_ret_t hash = 2166136261;
-    while (stm_has(&stm)) {
+    while (stm_has(stm)) {
         hash *= 16777619;
-        hash ^= stm_read_byte(&stm);
+        hash ^= stm_read_byte(stm);
     }
     return hash;
 }
 
-chl_fnv1a_32_ret_t chl_fnv1a_32_base(stm_t stm) {
+chl_fnv1a_32_ret_t chl_fnv1a_32_base(stm_t* stm) {
     chl_fnv1a_32_ret_t hash = 2166136261;
-    while (stm_has(&stm)) {
-        hash ^= stm_read_byte(&stm);
+    while (stm_has(stm)) {
+        hash ^= stm_read_byte(stm);
         hash *= 16777619;
     }
     return hash;
 }
 
-chl_fnv1_64_ret_t chl_fnv1_64_base(stm_t stm) {
+chl_fnv1_64_ret_t chl_fnv1_64_base(stm_t* stm) {
     chl_fnv1_64_ret_t hash = UINT64_C(14695981039346656037);
-    while (stm_has(&stm)) {
+    while (stm_has(stm)) {
         hash *= 1099511628211;
-        hash ^= stm_read_byte(&stm);
+        hash ^= stm_read_byte(stm);
     }
     return hash;
 }
 
-chl_fnv1a_64_ret_t chl_fnv1a_64_base(stm_t stm) {
+chl_fnv1a_64_ret_t chl_fnv1a_64_base(stm_t* stm) {
     chl_fnv1a_64_ret_t hash = UINT64_C(14695981039346656037);
-    while (stm_has(&stm)) {
-        hash ^= stm_read_byte(&stm);
+    while (stm_has(stm)) {
+        hash ^= stm_read_byte(stm);
         hash *= 1099511628211;
     }
     return hash;
@@ -182,7 +179,7 @@ static void siphash_2_4_round(uint64_t* vs) {
     vs[2]  = rotl64(vs[2], 32);
 }
 
-chl_siphash_2_4_ret_t chl_siphash_2_4_base(stm_t stm, chl_array_128b_t key) {
+chl_siphash_2_4_ret_t chl_siphash_2_4_base(stm_t* stm, chl_array_128b_t key) {
     uint64_t* keypair = (uint64_t*)&(key.array);
     keypair[0] = le64(keypair[0]);
     keypair[1] = le64(keypair[1]);
@@ -196,10 +193,10 @@ chl_siphash_2_4_ret_t chl_siphash_2_4_base(stm_t stm, chl_array_128b_t key) {
 
     bool has_next_block = true;
     size_t all_len = 0, read_len;
-    while (stm_has(&stm) || has_next_block) {
+    while (stm_has(stm) || has_next_block) {
         uint64_t mi = 0;
         all_len += (read_len =
-            stm_read_block(&stm, &mi, sizeof mi)
+            stm_read_block(stm, &mi, sizeof mi)
         ); mi = le64(mi);
 
         if (read_len < 8) {
