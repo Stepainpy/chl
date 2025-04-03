@@ -79,6 +79,25 @@ static inline uint64_t rev_bytes_64(uint64_t x) {
 for (size_t macroi = 0; macroi < size; macroi++) \
     (arr)[macroi] = op((arr)[macroi])
 
+// obs - One Bit and Size block
+#define obs_init \
+bool has_next_block     = true; \
+bool need_paste_one_bit = true; \
+size_t all_len = 0, read_len
+#define obs_has_block(stm) stm_has(stm) || has_next_block
+#define obs_extract_block_s64(stm, chunk, sizeof_chunk, sval, endian_op, words_cnt) \
+all_len += (read_len =                           \
+    stm_read_block(stm, chunk, (sizeof_chunk))); \
+if (read_len < (sizeof_chunk)                    \
+    && need_paste_one_bit) {                     \
+    *((uint8_t*)chunk + read_len) = 128;         \
+    need_paste_one_bit = false;                  \
+} if (read_len < (sizeof_chunk) - 8) {           \
+    *((uint64_t*)chunk +                         \
+        ((sizeof_chunk) / 8 - 1)) = sval;        \
+    has_next_block = false;                      \
+} apply_to(chunk, words_cnt, endian_op)
+
 /* Bit rotations */
 
 static inline uint32_t rotl32(uint32_t n, int s) { return n << s | n >> (32 - s); }
@@ -200,23 +219,11 @@ chl_md5_ret_t chl_md5_base(stm_t* stm) {
         0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476
     };
 
-    bool has_next_block     = true;
-    bool need_paste_one_bit = true;
-    size_t all_len = 0, read_len;
-    while (stm_has(stm) || has_next_block) {
+    obs_init;
+    while (obs_has_block(stm)) {
         uint32_t w[16] = {0};
-        all_len += (read_len = stm_read_block(stm, w, 64));
 
-        if (read_len < 64 && need_paste_one_bit) {
-            *((uint8_t*)w + read_len) = 128;
-            need_paste_one_bit = false;
-        }
-        if (read_len < 56) {
-            *((uint64_t*)w + 7) = le64(all_len * 8);
-            has_next_block = false;
-        }
-
-        apply_to(w, 16, le32);
+        obs_extract_block_s64(stm, w, 64, le64(all_len * 8), le32, 16);
 
         uint32_t a = hs[0], b = hs[1], c = hs[2], d = hs[3];
         for (size_t i = 0; i < 64; i++) {
@@ -254,23 +261,12 @@ chl_sha1_ret_t chl_sha1_base(stm_t* stm) {
         0x10325476, 0xC3D2E1F0
     };
 
-    bool has_next_block     = true;
-    bool need_paste_one_bit = true;
-    size_t all_len = 0, read_len;
-    while (stm_has(stm) || has_next_block) {
+    obs_init;
+    while (obs_has_block(stm)) {
         uint32_t w[80] = {0};
-        all_len += (read_len = stm_read_block(stm, w, 64));
 
-        if (read_len < 64 && need_paste_one_bit) {
-            *((uint8_t*)w + read_len) = 128;
-            need_paste_one_bit = false;
-        }
-        if (read_len < 56) {
-            *((uint64_t*)w + 7) = be64(all_len * 8);
-            has_next_block = false;
-        }
+        obs_extract_block_s64(stm, w, 64, be64(all_len * 8), be32, 16);
 
-        apply_to(w, 16, be32);
         for (size_t i = 16; i < 80; i++)
             w[i] = rotl32(w[i-3] ^ w[i-8] ^ w[i-14] ^ w[i-16], 1);
 
@@ -300,23 +296,12 @@ chl_sha1_ret_t chl_sha1_base(stm_t* stm) {
 }
 
 static void sha2_small_alg(stm_t* stm, uint32_t* hs, uint8_t* hash, size_t take) {
-    bool has_next_block     = true;
-    bool need_paste_one_bit = true;
-    size_t all_len = 0, read_len;
-    while (stm_has(stm) || has_next_block) {
+    obs_init;
+    while (obs_has_block(stm)) {
         uint32_t w[64] = {0};
-        all_len += (read_len = stm_read_block(stm, w, 64));
 
-        if (read_len < 64 && need_paste_one_bit) {
-            *((uint8_t*)w + read_len) = 128;
-            need_paste_one_bit = false;
-        }
-        if (read_len < 56) {
-            *((uint64_t*)w + 7) = be64(all_len * 8);
-            has_next_block = false;
-        }
+        obs_extract_block_s64(stm, w, 64, be64(all_len * 8), be32, 16);
 
-        apply_to(w, 16, be32);
         for (size_t i = 16; i < 64; i++) {
             uint32_t s0 = rotr32(w[i-15], 7) ^ rotr32(w[i-15], 18) ^ (w[i-15] >> 3);
             uint32_t s1 = rotr32(w[i-2], 17) ^ rotr32(w[i-2],  19) ^ (w[i-2] >> 10);
@@ -347,24 +332,13 @@ static void sha2_small_alg(stm_t* stm, uint32_t* hs, uint8_t* hash, size_t take)
 }
 
 static void sha2_big_alg(stm_t* stm, uint64_t* hs, uint8_t* hash, size_t take) {
-    bool has_next_block     = true;
-    bool need_paste_one_bit = true;
-    size_t all_len = 0, read_len;
-    while (stm_has(stm) || has_next_block) {
+    obs_init;
+    while (obs_has_block(stm)) {
         uint64_t w[80] = {0};
-        all_len += (read_len = stm_read_block(stm, w, 128));
 
-        if (read_len < 128 && need_paste_one_bit) {
-            *((uint8_t*)w + read_len) = 128;
-            need_paste_one_bit = false;
-        }
-        if (read_len < 112) {
-            // note: usually size_t is uint64_t
-            w[15] = be64(all_len * 8);
-            has_next_block = false;
-        }
+        // note: usually size_t is uint64_t
+        obs_extract_block_s64(stm, w, 128, be64(all_len * 8), be64, 16);
 
-        apply_to(w, 16, be64);
         for (size_t i = 16; i < 80; i++) {
             uint64_t s0 = rotr64(w[i-15], 1) ^ rotr64(w[i-15], 8) ^ (w[i-15] >> 7);
             uint64_t s1 = rotr64(w[i-2], 19) ^ rotr64(w[i-2], 61) ^ (w[i-2]  >> 6);
