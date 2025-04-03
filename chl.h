@@ -27,18 +27,22 @@ CHL_LIST_OF_BITS
  */
 
 #define CHL_LIST_OF_NAMES \
-DO(djb2,     uint32_t) \
-DO(pjw32,    uint32_t) \
-DO(pjw64,    uint64_t) \
-DO(fnv1_32,  uint32_t) \
-DO(fnv1a_32, uint32_t) \
-DO(fnv1_64,  uint64_t) \
-DO(fnv1a_64, uint64_t) \
-DO(crc32b,   uint32_t) \
-DO(crc32c,   uint32_t) \
-DO(sha1,     chl_160bit_t) \
-DO(sha2_224, chl_224bit_t) \
-DO(sha2_256, chl_256bit_t) \
+DO(djb2,         uint32_t) \
+DO(pjw32,        uint32_t) \
+DO(pjw64,        uint64_t) \
+DO(fnv1_32,      uint32_t) \
+DO(fnv1a_32,     uint32_t) \
+DO(fnv1_64,      uint64_t) \
+DO(fnv1a_64,     uint64_t) \
+DO(crc32b,       uint32_t) \
+DO(crc32c,       uint32_t) \
+DO(sha1,         chl_160bit_t) \
+DO(sha2_224,     chl_224bit_t) \
+DO(sha2_256,     chl_256bit_t) \
+DO(sha2_384,     chl_384bit_t) \
+DO(sha2_512,     chl_512bit_t) \
+DO(sha2_512_224, chl_224bit_t) \
+DO(sha2_512_256, chl_256bit_t) \
 
 /* DO:
  * name of function

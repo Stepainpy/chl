@@ -279,7 +279,7 @@ static void sha2_small_alg(stm_t* stm, uint32_t* hs, uint8_t* hash, size_t take)
             s1 = rotr32(e, 6) ^ rotr32(e, 11) ^ rotr32(e, 25);
             ma = (a & b) ^ (a & c) ^ (b & c);
             ch = (e & f) ^ (~e & g);
-            t1 = h + s1 + ch + sha2_224_256_k[i] + w[i];
+            t1 = h + s1 + ch + sha2_small_k[i] + w[i];
             t2 = s0 + ma;
 
             h = g; g = f; f = e; e = t1 + d;
@@ -291,6 +291,54 @@ static void sha2_small_alg(stm_t* stm, uint32_t* hs, uint8_t* hash, size_t take)
     
     apply_to(hs, 8, be32);
     memcpy(hash, hs, take * 4);
+}
+
+static void sha2_big_alg(stm_t* stm, uint64_t* hs, uint8_t* hash, size_t take) {
+    bool has_next_block     = true;
+    bool need_paste_one_bit = true;
+    size_t all_len = 0, read_len;
+    while (stm_has(stm) || has_next_block) {
+        uint64_t w[80] = {0};
+        all_len += (read_len = stm_read_block(stm, w, 128));
+
+        if (read_len < 128 && need_paste_one_bit) {
+            *((uint8_t*)w + read_len) = 128;
+            need_paste_one_bit = false;
+        }
+        if (read_len < 112) {
+            // note: usually size_t is uint64_t
+            w[15] = be64(all_len * 8);
+            has_next_block = false;
+        }
+
+        apply_to(w, 16, be64);
+        for (size_t i = 16; i < 80; i++) {
+            uint64_t s0 = rotr64(w[i-15], 1) ^ rotr64(w[i-15], 8) ^ (w[i-15] >> 7);
+            uint64_t s1 = rotr64(w[i-2], 19) ^ rotr64(w[i-2], 61) ^ (w[i-2]  >> 6);
+            w[i] = w[i-16] +s0 + w[i-7] + s1;
+        }
+
+        uint64_t a, b, c, d, e, f, g, h;
+        a = hs[0]; b = hs[1]; c = hs[2]; d = hs[3];
+        e = hs[4]; f = hs[5]; g = hs[6]; h = hs[7];
+        for (size_t i = 0; i < 80; i++) {
+            uint64_t s0, s1, ch, ma, t1, t2;
+            s0 = rotr64(a, 28) ^ rotr64(a, 34) ^ rotr64(a, 39);
+            s1 = rotr64(e, 14) ^ rotr64(e, 18) ^ rotr64(e, 41);
+            ma = (a & b) ^ (a & c) ^ (b & c);
+            ch = (e & f) ^ (~e & g);
+            t1 = h + s1 + ch + sha2_big_k[i] + w[i];
+            t2 = s0 + ma;
+
+            h = g; g = f; f = e; e = t1 + d;
+            d = c; c = b; b = a; a = t1 + t2;
+        }
+        hs[0] += a; hs[1] += b; hs[2] += c; hs[3] += d;
+        hs[4] += e; hs[5] += f; hs[6] += g; hs[7] += h;
+    }
+    
+    apply_to(hs, 8, be64);
+    memcpy(hash, hs, take * 8);
 }
 
 chl_sha2_224_ret_t chl_sha2_224_base(stm_t* stm) {
@@ -310,6 +358,48 @@ chl_sha2_256_ret_t chl_sha2_256_base(stm_t* stm) {
         0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
     };
     sha2_small_alg(stm, hs, hash.array, 8);
+    return hash;
+}
+
+chl_sha2_384_ret_t chl_sha2_384_base(stm_t* stm) {
+    chl_sha2_384_ret_t hash = {0};
+    uint64_t hs[8] = {
+        0xcbbb9d5dc1059ed8, 0x629a292a367cd507, 0x9159015a3070dd17, 0x152fecd8f70e5939,
+        0x67332667ffc00b31, 0x8eb44a8768581511, 0xdb0c2e0d64f98fa7, 0x47b5481dbefa4fa4
+    };
+    sha2_big_alg(stm, hs, hash.array, 6);
+    return hash;
+}
+
+chl_sha2_512_ret_t chl_sha2_512_base(stm_t* stm) {
+    chl_sha2_512_ret_t hash = {0};
+    uint64_t hs[8] = {
+        0x6a09e667f3bcc908, 0xbb67ae8584caa73b, 0x3c6ef372fe94f82b, 0xa54ff53a5f1d36f1,
+        0x510e527fade682d1, 0x9b05688c2b3e6c1f, 0x1f83d9abfb41bd6b, 0x5be0cd19137e2179
+    };
+    sha2_big_alg(stm, hs, hash.array, 8);
+    return hash;
+}
+
+chl_sha2_512_224_ret_t chl_sha2_512_224_base(stm_t* stm) {
+    uint8_t buffer[32] = {0};
+    uint64_t hs[8] = {
+        0x8c3d37c819544da2, 0x73e1996689dcd4d6, 0x1dfab7ae32ff9c82, 0x679dd514582f9fcf,
+        0x0f6d2b697bd44da8, 0x77e36f7304C48942, 0x3f9d85a86a1d36C8, 0x1112e6ad91d692a1
+    };
+    sha2_big_alg(stm, hs, buffer, 4);
+    chl_sha2_512_224_ret_t hash = {0};
+    memcpy(hash.array, buffer, sizeof hash);
+    return hash;
+}
+
+chl_sha2_512_256_ret_t chl_sha2_512_256_base(stm_t* stm) {
+    chl_sha2_512_256_ret_t hash = {0};
+    uint64_t hs[8] = {
+        0x22312194fc2bf72c, 0x9f555fa3c84c64c2, 0x2393b86b6f53b151, 0x963877195940eabd,
+        0x96283ee2a88effe3, 0xbe5e1e2553863992, 0x2b0199fc2c85b8aa, 0x0eb72ddC81c52ca2
+    };
+    sha2_big_alg(stm, hs, hash.array, 4);
     return hash;
 }
 
