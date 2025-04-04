@@ -11,14 +11,12 @@
  *   then hash is array = { 0x2f, 0xd4, 0xe1, ..., 0x93, 0xeb, 0x12 }
  */
 
-#define CHL_LIST_OF_BITS \
-DO(128) DO(160) DO(224) DO(256) DO(384) DO(512)
-
 #define DO(b) \
 typedef struct { \
     uint8_t array[b/8]; \
 } chl_ ## b ## bit_t;
-CHL_LIST_OF_BITS
+DO(128) DO(160) DO(224) \
+DO(256) DO(384) DO(512)
 #undef DO
 
 /* DO:
