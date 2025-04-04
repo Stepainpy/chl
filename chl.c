@@ -409,15 +409,13 @@ chl_sha2_512_ret_t chl_sha2_512_base(stm_t* stm) {
 }
 
 chl_sha2_512_224_ret_t chl_sha2_512_224_base(stm_t* stm) {
-    uint8_t buffer[32] = {0};
+    struct { chl_sha2_512_224_ret_t hash; uint32_t padding; } buffer = {0};
     uint64_t hs[8] = {
         0x8c3d37c819544da2, 0x73e1996689dcd4d6, 0x1dfab7ae32ff9c82, 0x679dd514582f9fcf,
         0x0f6d2b697bd44da8, 0x77e36f7304C48942, 0x3f9d85a86a1d36C8, 0x1112e6ad91d692a1
     };
-    sha2_big_alg(stm, hs, buffer, 4);
-    chl_sha2_512_224_ret_t hash = {0};
-    memcpy(hash.array, buffer, sizeof hash);
-    return hash;
+    sha2_big_alg(stm, hs, (void*)&buffer, 4);
+    return buffer.hash;
 }
 
 chl_sha2_512_256_ret_t chl_sha2_512_256_base(stm_t* stm) {
