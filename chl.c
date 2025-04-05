@@ -214,6 +214,19 @@ chl_crc32c_ret_t chl_crc32c_base(stm_t* stm) {
     return ~hash;
 }
 
+chl_jenkins_ret_t chl_jenkins_base(stm_t* stm) {
+    chl_jenkins_ret_t hash = 0;
+    while (stm_has(stm)) {
+        hash += stm_read_byte(stm);
+        hash += hash << 10;
+        hash ^= hash >>  6;
+    }
+    hash += hash <<  3;
+    hash ^= hash >> 11;
+    hash += hash << 15;
+    return hash;
+}
+
 chl_md5_ret_t chl_md5_base(stm_t* stm) {
     uint32_t hs[4] = {
         0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476

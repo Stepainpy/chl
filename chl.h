@@ -34,6 +34,7 @@ DO(fnv1_64,      uint64_t) \
 DO(fnv1a_64,     uint64_t) \
 DO(crc32b,       uint32_t) \
 DO(crc32c,       uint32_t) \
+DO(jenkins,      uint32_t) \
 DO(md5,          chl_128bit_t) \
 DO(sha1,         chl_160bit_t) \
 DO(sha2_224,     chl_224bit_t) \
