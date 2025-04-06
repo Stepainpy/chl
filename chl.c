@@ -8,6 +8,7 @@
 typedef struct stm_t {
     union { const uint8_t* data; FILE* file; } ptr;
     size_t count; // if count == SIZE_MAX then ptr is file, otherwise is span
+    struct stm_t* prev;
 } stm_t;
 
 #define stm_is_file(stmp) ((stmp)->count == SIZE_MAX)
@@ -18,18 +19,35 @@ static int fpeek(FILE* file) {
 }
 
 static bool stm_has(stm_t* stm) {
+    if (stm->prev) {
+        bool ph = stm_has(stm->prev);
+        if (ph) return true;
+        stm->prev = NULL;
+    }
+
     if (stm_is_file(stm))
         return fpeek(stm->ptr.file) != EOF;
     return stm->count > 0;
 }
 
 static uint8_t stm_read_byte(stm_t* stm) {
+    if (stm->prev)
+        return stm_read_byte(stm->prev);
+
     if (stm_is_file(stm))
         return getc(stm->ptr.file);
     return (--stm->count, *stm->ptr.data++);
 }
 
 static size_t stm_read_block(stm_t* stm, void* dest, size_t count) {
+    if (stm->prev) {
+        size_t rdlen = stm_read_block(stm->prev, dest, count);
+        if (rdlen == count) return rdlen;
+        count -= rdlen;
+        dest = (uint8_t*)dest + rdlen;
+        stm->prev = NULL;
+    }
+
     if (stm_is_file(stm))
         return fread(dest, 1, count, stm->ptr.file);
 
@@ -110,11 +128,11 @@ static inline uint64_t rotr64(uint64_t n, int s) { return n >> s | n << (64 - s)
 #define DO(name, ret) \
 static ret CHLN_FUNC(name, base)(stm_t* stm); \
 ret CHLN_FUNC(name, calc)(const void* source, size_t length) { \
-    stm_t stm; stm.ptr.data = source; stm.count = length; \
+    stm_t stm = {0}; stm.ptr.data = source; stm.count = length; \
     return CHLN_FUNC(name, base)(&stm); \
 } \
 ret CHLN_FUNC(name, calc_file)(FILE* src_file) { \
-    stm_t stm; stm.ptr.file = src_file; stm.count = SIZE_MAX; \
+    stm_t stm = {0}; stm.ptr.file = src_file; stm.count = SIZE_MAX; \
     return CHLN_FUNC(name, base)(&stm); \
 }
 CHL_LIST_OF_NAMES
@@ -123,11 +141,11 @@ CHL_LIST_OF_NAMES
 #define DO(name, ret, ktype, kname) \
 static ret CHLN_FUNC(name, base)(stm_t* stm, ktype kname); \
 ret CHLN_FUNC(name, calc)(const void* source, size_t length, ktype kname) { \
-    stm_t stm; stm.ptr.data = source; stm.count = length; \
+    stm_t stm = {0}; stm.ptr.data = source; stm.count = length; \
     return CHLN_FUNC(name, base)(&stm, kname); \
 } \
 ret CHLN_FUNC(name, calc_file)(FILE* src_file, ktype kname) { \
-    stm_t stm; stm.ptr.file = src_file; stm.count = SIZE_MAX; \
+    stm_t stm = {0}; stm.ptr.file = src_file; stm.count = SIZE_MAX; \
     return CHLN_FUNC(name, base)(&stm, kname); \
 }
 CHL_LIST_OF_NAMES_WITH_KEY
@@ -635,4 +653,52 @@ chl_siphash_2_4_ret_t chl_siphash_2_4_base(stm_t* stm, chl_128bit_t key) {
     siphash_2_4_round(vs);
 
     return le64(vs[0] ^ vs[1] ^ vs[2] ^ vs[3]);
+}
+
+static const chl_512bit_t hmac_sha2_256_ip = {{
+    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
+    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
+    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
+    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
+    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
+    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
+    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
+    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36
+}};
+
+static const chl_512bit_t hmac_sha2_256_op = {{
+    0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c,
+    0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c,
+    0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c,
+    0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c,
+    0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c,
+    0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c,
+    0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c,
+    0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c
+}};
+
+static void xor_512bit(chl_512bit_t* c, const chl_512bit_t* a, const chl_512bit_t* b) {
+    for (size_t i = 0; i < sizeof c->array; i++)
+        c->array[i] = a->array[i] ^ b->array[i];
+}
+
+chl_hmac_sha2_256_ret_t chl_hmac_sha2_256_base(stm_t* stm, chl_512bit_t key) {
+    chl_512bit_t ikey = {0}, okey = {0};
+    xor_512bit(&ikey, &key, &hmac_sha2_256_ip);
+    xor_512bit(&okey, &key, &hmac_sha2_256_op);
+
+    stm_t istm = {0};
+    istm.ptr.data = ikey.array;
+    istm.count = sizeof ikey;
+    stm->prev = &istm;
+    chl_sha2_256_ret_t ihash = chl_sha2_256_base(stm);
+
+    stm_t ostm = {0}, fstm = {0};
+    ostm.ptr.data = okey.array;
+    ostm.count = sizeof okey;
+    fstm.ptr.data = ihash.array;
+    fstm.count = sizeof ihash;
+    fstm.prev = &ostm;
+
+    return chl_sha2_256_base(&fstm);
 }
