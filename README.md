@@ -22,9 +22,10 @@ Cryptographic functions:
 ## Basic API
 
 `chl_xxx_ret_t` - hash function type result  
+`chl_xxx_key_t` - key type for hash function (maybe not exist)  
 `chl_xxx_calc` - find hash value of memory span (ptr + length)  
 `chl_xxx_calc_file` - find hash value of file (use `rb` mode)  
 where `xxx` - name of hash function.
 
 `CHL_DFLT` - name of hash function by default, if not defined then equal `djb2`  
-use for macros: `chl_ret_t`, `chl_calc`, `chl_calc_file`.
+use for macros: `chl_ret_t`, `chl_key_t`, `chl_calc`, `chl_calc_file`.
