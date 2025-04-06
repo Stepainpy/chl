@@ -11,12 +11,17 @@
  *   then hash is array = { 0x2f, 0xd4, 0xe1, ..., 0x93, 0xeb, 0x12 }
  */
 
+#define CHL_LIST_OF_BITS \
+DO(128) DO(160) DO(224)  \
+DO(256) DO(384) DO(512)  \
+
+#define CHL_BITS_NAME(bits) chl_ ## bits ## bit_t
+
 #define DO(b) \
 typedef struct { \
     uint8_t array[b/8]; \
-} chl_ ## b ## bit_t;
-DO(128) DO(160) DO(224) \
-DO(256) DO(384) DO(512)
+} CHL_BITS_NAME(b);
+CHL_LIST_OF_BITS
 #undef DO
 
 /* DO:
@@ -57,33 +62,25 @@ DO(siphash_2_4,   uint64_t,     chl_128bit_t, le_key) \
 DO(hmac_sha2_256, chl_256bit_t, chl_512bit_t,    key) \
 
 #define CHLN_RET_T(bn)    chl_ ## bn ## _ret_t
+#define CHLN_KEY_T(bn)    chl_ ## bn ## _key_t
 #define CHLN_FUNC(bn, fn) chl_ ## bn ## _ ## fn
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// Return type
+// Text only
 #define DO(name, ret) \
-typedef ret CHLN_RET_T(name);
-CHL_LIST_OF_NAMES
-#undef DO
-
-// Calculations functions
-#define DO(name, ret) \
+typedef ret CHLN_RET_T(name); \
 ret CHLN_FUNC(name, calc)(const void* source, size_t length); \
 ret CHLN_FUNC(name, calc_file)(FILE* src_file);
 CHL_LIST_OF_NAMES
 #undef DO
 
-// Return type
-#define DO(name, ret, ...) \
-typedef ret CHLN_RET_T(name);
-CHL_LIST_OF_NAMES_WITH_KEY
-#undef DO
-
-// Calculations functions with key
+// Text and key
 #define DO(name, ret, ktype, kname) \
+typedef ret   CHLN_RET_T(name); \
+typedef ktype CHLN_KEY_T(name); \
 ret CHLN_FUNC(name, calc)(const void* source, size_t length, ktype kname); \
 ret CHLN_FUNC(name, calc_file)(FILE* src_file, ktype kname);
 CHL_LIST_OF_NAMES_WITH_KEY
@@ -98,9 +95,11 @@ CHL_LIST_OF_NAMES_WITH_KEY
 #endif
 
 #define CHLN_RET_T_EXP(bn)    CHLN_RET_T(bn)
+#define CHLN_KEY_T_EXP(bn)    CHLN_KEY_T(bn)
 #define CHLN_FUNC_EXP(bn, fn) CHLN_FUNC(bn, fn)
 
 #define chl_ret_t     CHLN_RET_T_EXP(CHL_DFLT)
+#define chl_key_t     CHLN_KEY_T_EXP(CHL_DFLT)
 #define chl_calc      CHLN_FUNC_EXP(CHL_DFLT, calc)
 #define chl_calc_file CHLN_FUNC_EXP(CHL_DFLT, calc_file)
 

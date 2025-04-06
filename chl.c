@@ -93,6 +93,12 @@ static inline uint64_t rev_bytes_64(uint64_t x) {
 #  define be64(x) ((uint64_t)(x))
 #endif
 
+#ifdef __GNUC__
+#define MAYBE_UNUSED __attribute__((unused))
+#else
+#define MAYBE_UNUSED
+#endif
+
 #define apply_to(arr, size, op) \
 for (size_t macroi = 0; macroi < size; macroi++) \
     (arr)[macroi] = op((arr)[macroi])
@@ -122,6 +128,31 @@ static inline uint32_t rotl32(uint32_t n, int s) { return n << s | n >> (32 - s)
 static inline uint32_t rotr32(uint32_t n, int s) { return n >> s | n << (32 - s); }
 static inline uint64_t rotl64(uint64_t n, int s) { return n << s | n >> (64 - s); }
 static inline uint64_t rotr64(uint64_t n, int s) { return n >> s | n << (64 - s); }
+
+/* Extended math */
+
+static void add_256bit(chl_256bit_t* a, const chl_256bit_t* b) {
+    uint64_t* a64 = (uint64_t*)a->array;
+    uint64_t* b64 = (uint64_t*)b->array;
+    bool carry = false;
+
+    for (size_t i = 0; i < 4; i++) {
+        uint64_t c = a64[i] + b64[i] + carry;
+        carry = carry ? c <= a64[i] : c < a64[i];
+        a64[i] = c;
+    }
+}
+
+// XOR's
+#define DO(bits) \
+MAYBE_UNUSED static void xor_ ## bits ## bit( \
+    CHL_BITS_NAME(bits)* c, \
+    const CHL_BITS_NAME(bits)* a, \
+    const CHL_BITS_NAME(bits)* b) { \
+    for (size_t i = 0; i < sizeof c->array; i++) \
+        c->array[i] = a->array[i] ^ b->array[i]; }
+CHL_LIST_OF_BITS
+#undef DO
 
 /* Defining `calc` and `calc_file` as versions of `base` */
 
@@ -245,6 +276,13 @@ chl_jenkins_ret_t chl_jenkins_base(stm_t* stm) {
     return hash;
 }
 
+static const uint32_t md5_s[64] = {
+    7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22,
+    5,  9, 14, 20, 5,  9, 14, 20, 5,  9, 14, 20, 5,  9, 14, 20,
+    4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23,
+    6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21
+};
+
 chl_md5_ret_t chl_md5_base(stm_t* stm) {
     uint32_t hs[4] = {
         0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476
@@ -287,23 +325,6 @@ chl_md5_ret_t chl_md5_base(stm_t* stm) {
 }
 
 /* WIP gost hash begin */
-
-static void add_256bit(chl_256bit_t* a, const chl_256bit_t* b) {
-    uint64_t* a64 = (uint64_t*)a->array;
-    uint64_t* b64 = (uint64_t*)b->array;
-    bool carry = false;
-
-    for (size_t i = 0; i < 4; i++) {
-        uint64_t c = a64[i] + b64[i] + carry;
-        carry = carry ? c <= a64[i] : c < a64[i];
-        a64[i] = c;
-    }
-}
-
-static void xor_256bit(chl_256bit_t* c, const chl_256bit_t* a, const chl_256bit_t* b) {
-    for (size_t i = 0; i < 32; i++)
-        c->array[i] = a->array[i] ^ b->array[i];
-}
 
 static const chl_256bit_t gost_C3 = {{
     0x00, 0xff, 0x00, 0xff, 0x00, 0xff, 0x00, 0xff,
@@ -676,11 +697,6 @@ static const chl_512bit_t hmac_sha2_256_op = {{
     0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c,
     0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c
 }};
-
-static void xor_512bit(chl_512bit_t* c, const chl_512bit_t* a, const chl_512bit_t* b) {
-    for (size_t i = 0; i < sizeof c->array; i++)
-        c->array[i] = a->array[i] ^ b->array[i];
-}
 
 chl_hmac_sha2_256_ret_t chl_hmac_sha2_256_base(stm_t* stm, chl_512bit_t key) {
     chl_512bit_t ikey = {0}, okey = {0};
