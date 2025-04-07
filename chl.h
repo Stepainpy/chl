@@ -14,6 +14,7 @@
 #define CHL_LIST_OF_BITS \
 DO(128) DO(160) DO(224)  \
 DO(256) DO(384) DO(512)  \
+DO(1024)
 
 #define CHL_BITS_NAME(bits) chl_ ## bits ## bit_t
 
@@ -64,7 +65,12 @@ DO(sha2_512_256, chl_256bit_t) \
 
 #define CHL_LIST_OF_NAMES_WITH_KEY \
 DO(siphash_2_4,   uint64_t,     chl_128bit_t, le_key) \
+DO(hmac_md5,      chl_128bit_t, chl_byte_span_t, key) \
+DO(hmac_sha1,     chl_160bit_t, chl_byte_span_t, key) \
+DO(hmac_sha2_224, chl_224bit_t, chl_byte_span_t, key) \
 DO(hmac_sha2_256, chl_256bit_t, chl_byte_span_t, key) \
+DO(hmac_sha2_384, chl_384bit_t, chl_byte_span_t, key) \
+DO(hmac_sha2_512, chl_512bit_t, chl_byte_span_t, key) \
 
 #define CHLN_RET_T(bn)    chl_ ## bn ## _ret_t
 #define CHLN_KEY_T(bn)    chl_ ## bn ## _key_t

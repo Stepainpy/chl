@@ -680,30 +680,37 @@ chl_siphash_2_4_ret_t chl_siphash_2_4_base(stm_t* stm, chl_128bit_t key) {
     return le64(vs[0] ^ vs[1] ^ vs[2] ^ vs[3]);
 }
 
-chl_hmac_sha2_256_ret_t chl_hmac_sha2_256_base(stm_t* msg_stm, chl_byte_span_t key) {
-    chl_512bit_t ikey = {0}, okey = {0};
-    stm_t istm, ostm, fstm;
-
-    if (key.count > sizeof ikey) {
-        stm_t kstm; stm_init_span(kstm, key.data, key.count);
-        chl_sha2_256_ret_t khash = chl_sha2_256_base(&kstm);
-        memcpy(ikey.array, khash.array, sizeof khash);
-        memcpy(okey.array, khash.array, sizeof khash);
-    } else {
-        memcpy(ikey.array, key.data, key.count);
-        memcpy(okey.array, key.data, key.count);
-    }
-
-    apply_to(ikey.array, sizeof ikey, 0x36 ^);
-    apply_to(okey.array, sizeof okey, 0x5c ^);
-
-    msg_stm->prev = &istm;
-    stm_init_span(istm, ikey.array, sizeof ikey);
-    chl_sha2_256_ret_t ihash = chl_sha2_256_base(msg_stm);
-
-    stm_init_span(ostm, okey.array,  sizeof okey);
-    stm_init_span(fstm, ihash.array, sizeof ihash);
-    fstm.prev = &ostm;
-
-    return chl_sha2_256_base(&fstm);
+// Definition HMAC
+#define DO(hfn, block_type) \
+CHLN_RET_T_EXP(hmac_##hfn) CHLN_FUNC_EXP(hmac_##hfn, base)(   \
+    stm_t* msg_stm, chl_byte_span_t key) {                    \
+    block_type ikey = {0}, okey = {0};                        \
+    stm_t istm, ostm, fstm;                                   \
+                                                              \
+    if (key.count > sizeof ikey) {                            \
+        stm_t kstm; stm_init_span(kstm, key.data, key.count); \
+        CHLN_RET_T(hfn) khash = CHLN_FUNC(hfn, base)(&kstm);  \
+        memcpy(ikey.array, khash.array, sizeof khash);        \
+        memcpy(okey.array, khash.array, sizeof khash);        \
+    } else {                                                  \
+        memcpy(ikey.array, key.data, key.count);              \
+        memcpy(okey.array, key.data, key.count);              \
+    }                                                         \
+                                                              \
+    apply_to(ikey.array, sizeof ikey, 0x36 ^);                \
+    apply_to(okey.array, sizeof okey, 0x5c ^);                \
+                                                              \
+    msg_stm->prev = &istm;                                    \
+    stm_init_span(istm, ikey.array, sizeof ikey);             \
+    CHLN_RET_T(hfn) ihash = CHLN_FUNC(hfn, base)(msg_stm);    \
+                                                              \
+    stm_init_span(ostm, okey.array,  sizeof okey);            \
+    stm_init_span(fstm, ihash.array, sizeof ihash);           \
+    fstm.prev = &ostm;                                        \
+                                                              \
+    return CHLN_FUNC(hfn, base)(&fstm);                       \
 }
+DO(md5,      chl_512bit_t)  DO(sha1,     chl_512bit_t)
+DO(sha2_224, chl_512bit_t)  DO(sha2_256, chl_512bit_t)
+DO(sha2_384, chl_1024bit_t) DO(sha2_512, chl_1024bit_t)
+#undef DO
