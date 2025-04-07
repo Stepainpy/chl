@@ -55,6 +55,7 @@ DO(sha2_384,     chl_384bit_t) \
 DO(sha2_512,     chl_512bit_t) \
 DO(sha2_512_224, chl_224bit_t) \
 DO(sha2_512_256, chl_256bit_t) \
+DO(ripemd_160,   chl_160bit_t) \
 
 /* DO:
  * name of function

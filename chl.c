@@ -624,6 +624,57 @@ chl_sha2_512_256_ret_t chl_sha2_512_256_base(stm_t* stm) {
     return hash;
 }
 
+#define ripemd_160_lentf(u64) le64(le32(u64 >> 32) | le32(u64 & UINT32_MAX))
+
+static uint32_t ripemd_160_f(size_t i, uint32_t x, uint32_t y, uint32_t z) {
+    switch (i / 16) {
+        case 0: return x ^ y ^ z;
+        case 1: return (x & y) | (~x & z);
+        case 2: return (x | ~y) ^ z;
+        case 3: return (x & z) | (y & ~z);
+        case 4: return x ^ (y | ~z);
+        default: return 0;
+    }
+}
+
+chl_ripemd_160_ret_t chl_ripemd_160_base(stm_t* stm) {
+    uint32_t hs[5] = {
+        0x67452301, 0xEFCDAB89, 0x98BADCFE,
+        0x10325476, 0xC3D2E1F0
+    };
+
+    obs_init;
+    while (obs_has_block(stm)) {
+        uint32_t w[16] = {0};
+
+        obs_extract_block_s64(stm, w, sizeof w,
+            ripemd_160_lentf(all_len * 8), le32, 16);
+
+        uint32_t a0, a1, b0, b1, c0, c1, d0, d1, e0, e1, t;
+        a0 = hs[0]; b0 = hs[1]; c0 = hs[2]; d0 = hs[3]; e0 = hs[4];
+        a1 = hs[0]; b1 = hs[1]; c1 = hs[2]; d1 = hs[3]; e1 = hs[4];
+        for (size_t i = 0; i < 80; i++) {
+            t = rotl32(a0 + ripemd_160_f(i, b0, c0, d0) +
+                w[ripemd_160_r[0][i]] + ripemd_160_k[0][i/16],
+                ripemd_160_s[0][i]) + e0;
+            a0 = e0; e0 = d0; d0 = rotl32(c0, 10); c0 = b0; b0 = t;
+
+            t = rotl32(a1 + ripemd_160_f(79 - i, b1, c1, d1) +
+                w[ripemd_160_r[1][i]] + ripemd_160_k[1][i/16],
+                ripemd_160_s[1][i]) + e1;
+            a1 = e1; e1 = d1; d1 = rotl32(c1, 10); c1 = b1; b1 = t;
+        }
+        t     = hs[1] + c0 + d1; hs[1] = hs[2] + d0 + e1;
+        hs[2] = hs[3] + e0 + a1; hs[3] = hs[4] + a0 + b1;
+        hs[4] = hs[0] + b0 + c1; hs[0] = t;
+    }
+
+    apply_to(hs, 5, le32);
+    chl_ripemd_160_ret_t hash = {0};
+    memcpy(hash.array, hs, sizeof hs);
+    return hash;
+}
+
 static void siphash_2_4_round(uint64_t* vs) {
     vs[0] += vs[1]; vs[2] += vs[3];
     vs[1]  = rotl64(vs[1], 13);

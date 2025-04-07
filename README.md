@@ -18,6 +18,7 @@ Cryptographic functions:
 - `sha2-(224/256/384/512)`
 - `sha2-512/(224/256)`
 - `hmac-*`
+- `ripemd-160`
 
 ## Basic API
 
