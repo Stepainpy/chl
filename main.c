@@ -1,4 +1,4 @@
-#define CHL_DFLT sha1
+#define CHL_DEFAULT sha1
 #include <stdio.h>
 #include <stdlib.h>
 #include "chl.h"
@@ -34,7 +34,7 @@ int main(void) {
     fread(buffer, 1, flen, fd);
     rewind(fd);
 
-    chl_ret_t span_hash = chl_calc(buffer, flen);
+    chl_ret_t span_hash = chl_calc_span(buffer, flen);
     chl_ret_t file_hash = chl_calc_file(fd);
 
     puts("test: "CORRECT_HASH);

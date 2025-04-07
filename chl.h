@@ -83,7 +83,7 @@ extern "C" {
 // Text only
 #define DO(name, ret) \
 typedef ret CHLN_RET_T(name); \
-ret CHLN_FUNC(name, calc)(const void* source, size_t length); \
+ret CHLN_FUNC(name, calc_span)(const void* source, size_t length); \
 ret CHLN_FUNC(name, calc_file)(FILE* src_file);
 CHL_LIST_OF_NAMES
 #undef DO
@@ -92,7 +92,7 @@ CHL_LIST_OF_NAMES
 #define DO(name, ret, ktype, kname) \
 typedef ret   CHLN_RET_T(name); \
 typedef ktype CHLN_KEY_T(name); \
-ret CHLN_FUNC(name, calc)(const void* source, size_t length, ktype kname); \
+ret CHLN_FUNC(name, calc_span)(const void* source, size_t length, ktype kname); \
 ret CHLN_FUNC(name, calc_file)(FILE* src_file, ktype kname);
 CHL_LIST_OF_NAMES_WITH_KEY
 #undef DO
@@ -101,17 +101,17 @@ CHL_LIST_OF_NAMES_WITH_KEY
 }
 #endif
 
-#ifndef CHL_DFLT
-#define CHL_DFLT djb2
+#ifndef CHL_DEFAULT
+#define CHL_DEFAULT djb2
 #endif
 
 #define CHLN_RET_T_EXP(bn)    CHLN_RET_T(bn)
 #define CHLN_KEY_T_EXP(bn)    CHLN_KEY_T(bn)
 #define CHLN_FUNC_EXP(bn, fn) CHLN_FUNC(bn, fn)
 
-#define chl_ret_t     CHLN_RET_T_EXP(CHL_DFLT)
-#define chl_key_t     CHLN_KEY_T_EXP(CHL_DFLT)
-#define chl_calc      CHLN_FUNC_EXP(CHL_DFLT, calc)
-#define chl_calc_file CHLN_FUNC_EXP(CHL_DFLT, calc_file)
+#define chl_ret_t     CHLN_RET_T_EXP(CHL_DEFAULT)
+#define chl_key_t     CHLN_KEY_T_EXP(CHL_DEFAULT)
+#define chl_calc_span CHLN_FUNC_EXP(CHL_DEFAULT, calc_span)
+#define chl_calc_file CHLN_FUNC_EXP(CHL_DEFAULT, calc_file)
 
 #endif // CHL_H

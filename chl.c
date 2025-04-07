@@ -158,11 +158,11 @@ MAYBE_UNUSED static void xor_ ## bits ## bit( \
 CHL_LIST_OF_BITS
 #undef DO
 
-/* Defining `calc` and `calc_file` as versions of `base` */
+/* Defining `calc_span` and `calc_file` as versions of `base` */
 
 #define DO(name, ret) \
 static ret CHLN_FUNC(name, base)(stm_t* stm); \
-ret CHLN_FUNC(name, calc)(const void* source, size_t length) { \
+ret CHLN_FUNC(name, calc_span)(const void* source, size_t length) { \
     stm_t stm; stm_init_span(stm, source, length); \
     return CHLN_FUNC(name, base)(&stm); \
 } \
@@ -175,7 +175,7 @@ CHL_LIST_OF_NAMES
 
 #define DO(name, ret, ktype, kname) \
 static ret CHLN_FUNC(name, base)(stm_t* stm, ktype kname); \
-ret CHLN_FUNC(name, calc)(const void* source, size_t length, ktype kname) { \
+ret CHLN_FUNC(name, calc_span)(const void* source, size_t length, ktype kname) { \
     stm_t stm; stm_init_span(stm, source, length); \
     return CHLN_FUNC(name, base)(&stm, kname); \
 } \
