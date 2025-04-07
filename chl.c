@@ -12,6 +12,10 @@ typedef struct stm_t {
 } stm_t;
 
 #define stm_is_file(stmp) ((stmp)->count == SIZE_MAX)
+#define stm_init_span(stmo, p, c) \
+(stmo).prev = NULL; (stmo).ptr.data = p; (stmo).count = c
+#define stm_init_file(stmo, f) \
+(stmo).prev = NULL; (stmo).ptr.file = f; (stmo).count = SIZE_MAX
 
 static int fpeek(FILE* file) {
     const int c = getc(file);
@@ -159,11 +163,11 @@ CHL_LIST_OF_BITS
 #define DO(name, ret) \
 static ret CHLN_FUNC(name, base)(stm_t* stm); \
 ret CHLN_FUNC(name, calc)(const void* source, size_t length) { \
-    stm_t stm = {0}; stm.ptr.data = source; stm.count = length; \
+    stm_t stm; stm_init_span(stm, source, length); \
     return CHLN_FUNC(name, base)(&stm); \
 } \
 ret CHLN_FUNC(name, calc_file)(FILE* src_file) { \
-    stm_t stm = {0}; stm.ptr.file = src_file; stm.count = SIZE_MAX; \
+    stm_t stm; stm_init_file(stm, src_file); \
     return CHLN_FUNC(name, base)(&stm); \
 }
 CHL_LIST_OF_NAMES
@@ -172,11 +176,11 @@ CHL_LIST_OF_NAMES
 #define DO(name, ret, ktype, kname) \
 static ret CHLN_FUNC(name, base)(stm_t* stm, ktype kname); \
 ret CHLN_FUNC(name, calc)(const void* source, size_t length, ktype kname) { \
-    stm_t stm = {0}; stm.ptr.data = source; stm.count = length; \
+    stm_t stm; stm_init_span(stm, source, length); \
     return CHLN_FUNC(name, base)(&stm, kname); \
 } \
 ret CHLN_FUNC(name, calc_file)(FILE* src_file, ktype kname) { \
-    stm_t stm = {0}; stm.ptr.file = src_file; stm.count = SIZE_MAX; \
+    stm_t stm; stm_init_file(stm, src_file); \
     return CHLN_FUNC(name, base)(&stm, kname); \
 }
 CHL_LIST_OF_NAMES_WITH_KEY
@@ -676,44 +680,29 @@ chl_siphash_2_4_ret_t chl_siphash_2_4_base(stm_t* stm, chl_128bit_t key) {
     return le64(vs[0] ^ vs[1] ^ vs[2] ^ vs[3]);
 }
 
-static const chl_512bit_t hmac_sha2_256_ip = {{
-    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
-    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
-    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
-    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
-    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
-    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
-    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
-    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36
-}};
-
-static const chl_512bit_t hmac_sha2_256_op = {{
-    0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c,
-    0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c,
-    0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c,
-    0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c,
-    0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c,
-    0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c,
-    0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c,
-    0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c
-}};
-
-chl_hmac_sha2_256_ret_t chl_hmac_sha2_256_base(stm_t* stm, chl_512bit_t key) {
+chl_hmac_sha2_256_ret_t chl_hmac_sha2_256_base(stm_t* msg_stm, chl_byte_span_t key) {
     chl_512bit_t ikey = {0}, okey = {0};
-    xor_512bit(&ikey, &key, &hmac_sha2_256_ip);
-    xor_512bit(&okey, &key, &hmac_sha2_256_op);
+    stm_t istm, ostm, fstm;
 
-    stm_t istm = {0};
-    istm.ptr.data = ikey.array;
-    istm.count = sizeof ikey;
-    stm->prev = &istm;
-    chl_sha2_256_ret_t ihash = chl_sha2_256_base(stm);
+    if (key.count > sizeof ikey) {
+        stm_t kstm; stm_init_span(kstm, key.data, key.count);
+        chl_sha2_256_ret_t khash = chl_sha2_256_base(&kstm);
+        memcpy(ikey.array, khash.array, sizeof khash);
+        memcpy(okey.array, khash.array, sizeof khash);
+    } else {
+        memcpy(ikey.array, key.data, key.count);
+        memcpy(okey.array, key.data, key.count);
+    }
 
-    stm_t ostm = {0}, fstm = {0};
-    ostm.ptr.data = okey.array;
-    ostm.count = sizeof okey;
-    fstm.ptr.data = ihash.array;
-    fstm.count = sizeof ihash;
+    apply_to(ikey.array, sizeof ikey, 0x36 ^);
+    apply_to(okey.array, sizeof okey, 0x5c ^);
+
+    msg_stm->prev = &istm;
+    stm_init_span(istm, ikey.array, sizeof ikey);
+    chl_sha2_256_ret_t ihash = chl_sha2_256_base(msg_stm);
+
+    stm_init_span(ostm, okey.array,  sizeof okey);
+    stm_init_span(fstm, ihash.array, sizeof ihash);
     fstm.prev = &ostm;
 
     return chl_sha2_256_base(&fstm);

@@ -24,6 +24,11 @@ typedef struct { \
 CHL_LIST_OF_BITS
 #undef DO
 
+typedef struct {
+    const void* data;
+    size_t count;
+} chl_byte_span_t;
+
 /* DO:
  * name of function
  * return type
@@ -59,7 +64,7 @@ DO(sha2_512_256, chl_256bit_t) \
 
 #define CHL_LIST_OF_NAMES_WITH_KEY \
 DO(siphash_2_4,   uint64_t,     chl_128bit_t, le_key) \
-DO(hmac_sha2_256, chl_256bit_t, chl_512bit_t,    key) \
+DO(hmac_sha2_256, chl_256bit_t, chl_byte_span_t, key) \
 
 #define CHLN_RET_T(bn)    chl_ ## bn ## _ret_t
 #define CHLN_KEY_T(bn)    chl_ ## bn ## _key_t
