@@ -191,12 +191,12 @@ static const uint64_t sha2_big_k[80] = {
     0x431d67c49c100d4c, 0x4cc5d4becb3e42b6, 0x597f299cfc657e2a, 0x5fcb6fab3ad6faec, 0x6c44198c4a475817
 };
 
-static const uint32_t ripemd_160_k[2][5] = {
+static const uint32_t ripemd_1632_k[2][5] = {
     { 0x00000000, 0x5A827999, 0x6ED9EBA1, 0x8F1BBCDC, 0xA953FD4E },
     { 0x50A28BE6, 0x5C4DD124, 0x6D703EF3, 0x7A6D76E9, 0x00000000 }
 };
 
-static const uint8_t ripemd_160_r[2][80] = {
+static const uint8_t ripemd_1632_r[2][80] = {
     {
         0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
         7, 4, 13, 1, 10, 6, 15, 3, 12, 0, 9, 5, 2, 14, 11, 8,
@@ -213,7 +213,7 @@ static const uint8_t ripemd_160_r[2][80] = {
     }
 };
 
-static const uint8_t ripemd_160_s[2][80] = {
+static const uint8_t ripemd_1632_s[2][80] = {
     {
         11, 14, 15, 12, 5, 8, 7, 9, 11, 13, 14, 15, 6, 7, 9, 8,
         7, 6, 8, 13, 11, 9, 7, 15, 7, 12, 15, 9, 11, 7, 13, 12,

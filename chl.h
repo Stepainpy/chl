@@ -14,7 +14,7 @@
 #define CHL_LIST_OF_BITS \
 DO(128) DO(160) DO(224)  \
 DO(256) DO(384) DO(512)  \
-DO(1024)
+DO(320) DO(1024)
 
 #define CHL_BITS_NAME(bits) chl_ ## bits ## bit_t
 
@@ -56,6 +56,7 @@ DO(sha2_512,     chl_512bit_t) \
 DO(sha2_512_224, chl_224bit_t) \
 DO(sha2_512_256, chl_256bit_t) \
 DO(ripemd_160,   chl_160bit_t) \
+DO(ripemd_320,   chl_320bit_t) \
 
 /* DO:
  * name of function
