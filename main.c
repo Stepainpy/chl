@@ -9,10 +9,20 @@ void memdump(const void* src, size_t count, FILE* file) {
 }
 
 #define CORRECT_HASH "2fd4e1c67a2d28fced849ee1bb76e7391b93eb12"
-#if 0 // integer branch
+#if 0
+/* has key argument */
+chl_key_t key = {"The secret kword", 16};
+#define KEY , key
+#else
+#define KEY
+#endif
+
+#if 0
+/* result is integer */
 #define FMT "%016llx"
 #define puth(rem, hr) printf(rem": "FMT"\n", hr)
-#else // array branch
+#else
+/* result is array */
 #define puth(rem, hr) do { \
     printf(rem": "); \
     memdump((hr).array, \
@@ -61,8 +71,8 @@ int main(void) {
     fread(buffer, 1, flen, fd);
     rewind(fd);
 
-    chl_ret_t span_hash = chl_calc_span(buffer, flen);
-    chl_ret_t file_hash = chl_calc_file(fd);
+    chl_ret_t span_hash = chl_calc_span(buffer, flen KEY);
+    chl_ret_t file_hash = chl_calc_file(fd KEY);
 
     puts("test: "CORRECT_HASH);
     puth("span", span_hash);
