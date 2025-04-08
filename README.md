@@ -17,8 +17,9 @@ Cryptographic functions:
 - `siphash-2-4`
 - `sha2-(224/256/384/512)`
 - `sha2-512/(224/256)`
+- `hmac-(md5/sha1/sha2)`
 - `ripemd-(160/256/320)`
-- `hmac-*`
+- `blake2b-(224/256/384/512)`
 
 ## Basic API
 

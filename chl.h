@@ -74,6 +74,10 @@ DO(hmac_sha2_224, chl_224bit_t, chl_byte_span_t, key) \
 DO(hmac_sha2_256, chl_256bit_t, chl_byte_span_t, key) \
 DO(hmac_sha2_384, chl_384bit_t, chl_byte_span_t, key) \
 DO(hmac_sha2_512, chl_512bit_t, chl_byte_span_t, key) \
+DO(blake2b_224,   chl_224bit_t, chl_byte_span_t, key) \
+DO(blake2b_256,   chl_256bit_t, chl_byte_span_t, key) \
+DO(blake2b_384,   chl_384bit_t, chl_byte_span_t, key) \
+DO(blake2b_512,   chl_512bit_t, chl_byte_span_t, key) \
 
 #define CHLN_RET_T(bn)    chl_ ## bn ## _ret_t
 #define CHLN_KEY_T(bn)    chl_ ## bn ## _key_t
