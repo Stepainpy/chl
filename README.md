@@ -10,6 +10,7 @@ Non-Cryptographic functions:
 - `fnv1[a]-(32/64)`
 - `crc32(b/c)`
 - `jenkins`
+- `murmur3a`
 - `md5`
 - `sha1`
 

@@ -280,6 +280,36 @@ chl_jenkins_ret_t chl_jenkins_base(stm_t* stm) {
     return hash;
 }
 
+static uint32_t murmur3a_mix(uint32_t k) {
+    k *= 0xcc9e2d51;
+    k = (k << 15) | (k >> 17);
+    k *= 0x1b873593;
+    return k;
+}
+
+chl_murmur3a_ret_t chl_murmur3a_base(stm_t* stm) {
+    chl_murmur3a_ret_t hash = 0;
+
+    size_t allread = 0, rdlen;
+    while (stm_has(stm)) {
+        uint32_t k = 0;
+        allread += (rdlen = stm_read_block(stm, &k, sizeof k));
+        hash ^= murmur3a_mix(le32(k));
+        if (rdlen == sizeof k) {
+            hash = (hash << 13) | (hash >> 19);
+            hash = hash * 5 + 0xe6546b64;
+        }
+    }
+
+    hash ^= allread;
+    hash ^= hash >> 16;
+    hash *= 0x85ebca6b;
+    hash ^= hash >> 13;
+    hash *= 0xc2b2ae35;
+    hash ^= hash >> 16;
+    return hash;
+}
+
 static const uint32_t md5_s[64] = {
     7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22,
     5,  9, 14, 20, 5,  9, 14, 20, 5,  9, 14, 20, 5,  9, 14, 20,
