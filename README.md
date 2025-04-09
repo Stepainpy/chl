@@ -6,22 +6,22 @@ CHL - C hashing library. Collection of hash functions
 
 Non-Cryptographic functions:
 - `djb2`
-- `pjw-(32/64)`
-- `fnv1[a]-(32/64)`
-- `crc32(b/c)`
+- `PJW-(32/64)`
+- `FNV1[a]-(32/64)`
+- `CRC32(b/c)`
 - `jenkins`
-- `murmur3a`
-- `md5`
-- `sha1`
+- `MurMur3a`
+- `MD5`
+- `SHA1`
 
 Cryptographic functions:
-- `siphash-2-4`
-- `sha2-(224/256/384/512)`
-- `sha2-512/(224/256)`
-- `hmac-(md5/sha1/sha2)`
-- `ripemd-(160/256/320)`
-- `blake2b-(224/256/384/512)`
-- `blake2s-(128/160/224/256)`
+- `SipHash-2-4`
+- `SHA2-(224/256/384/512)`
+- `SHA2-512/(224/256)`
+- `HMAC-(MD5/SHA1/SHA2)`
+- `RIPEMD-(160/256/320)`
+- `BLAKE2b-(224/256/384/512)`
+- `BLAKE2s-(128/160/224/256)`
 
 ## Basic API
 
