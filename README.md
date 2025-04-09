@@ -21,6 +21,7 @@ Cryptographic functions:
 - `hmac-(md5/sha1/sha2)`
 - `ripemd-(160/256/320)`
 - `blake2b-(224/256/384/512)`
+- `blake2s-(128/160/224/256)`
 
 ## Basic API
 

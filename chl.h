@@ -79,6 +79,10 @@ DO(blake2b_224,   chl_224bit_t, chl_byte_span_t, key) \
 DO(blake2b_256,   chl_256bit_t, chl_byte_span_t, key) \
 DO(blake2b_384,   chl_384bit_t, chl_byte_span_t, key) \
 DO(blake2b_512,   chl_512bit_t, chl_byte_span_t, key) \
+DO(blake2s_128,   chl_128bit_t, chl_byte_span_t, key) \
+DO(blake2s_160,   chl_160bit_t, chl_byte_span_t, key) \
+DO(blake2s_224,   chl_224bit_t, chl_byte_span_t, key) \
+DO(blake2s_256,   chl_256bit_t, chl_byte_span_t, key) \
 
 #define CHLN_RET_T(bn)    chl_ ## bn ## _ret_t
 #define CHLN_KEY_T(bn)    chl_ ## bn ## _key_t

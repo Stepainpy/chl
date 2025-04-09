@@ -11,7 +11,8 @@ void memdump(const void* src, size_t count, FILE* file) {
 #define CORRECT_HASH "2fd4e1c67a2d28fced849ee1bb76e7391b93eb12"
 #if 0
 /* has key argument */
-chl_key_t key = {"The secret kword", 16};
+chl_key_t key = {"", 0};
+// chl_key_t key = {"The secret kword", 16};
 #define KEY , key
 #else
 #define KEY

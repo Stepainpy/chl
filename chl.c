@@ -884,6 +884,17 @@ DO(sha2_224, chl_512bit_t)  DO(sha2_256, chl_512bit_t)
 DO(sha2_384, chl_1024bit_t) DO(sha2_512, chl_1024bit_t)
 #undef DO
 
+static void blake2s_mix(
+    uint32_t* a, uint32_t* b,
+    uint32_t* c, uint32_t* d,
+    uint32_t  x, uint32_t  y
+) {
+    *a += *b + x; *d = rotr32(*d ^ *a, 16);
+    *c += *d    ; *b = rotr32(*b ^ *c, 12);
+    *a += *b + y; *d = rotr32(*d ^ *a,  8);
+    *c += *d    ; *b = rotr32(*b ^ *c,  7);
+}
+
 static void blake2b_mix(
     uint64_t* a, uint64_t* b,
     uint64_t* c, uint64_t* d,
@@ -893,6 +904,32 @@ static void blake2b_mix(
     *c += *d    ; *b = rotr64(*b ^ *c, 24);
     *a += *b + y; *d = rotr64(*d ^ *a, 16);
     *c += *d    ; *b = rotr64(*b ^ *c, 63);
+}
+
+static void blake2s_compress(uint32_t* hs, uint32_t* chunk, size_t comped, bool islast) {
+    uint32_t vs[16] = {
+        hs[0], hs[1], hs[2], hs[3], hs[4], hs[5], hs[6], hs[7],
+        0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
+        0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
+    };
+
+    vs[12] ^= comped;
+    if (islast) vs[14] = ~vs[14];
+
+    for (size_t i = 0; i < 10; i++) {
+        blake2s_mix(vs+0, vs+4, vs+ 8, vs+12, chunk[blake2_s[i][0]], chunk[blake2_s[i][1]]);
+        blake2s_mix(vs+1, vs+5, vs+ 9, vs+13, chunk[blake2_s[i][2]], chunk[blake2_s[i][3]]);
+        blake2s_mix(vs+2, vs+6, vs+10, vs+14, chunk[blake2_s[i][4]], chunk[blake2_s[i][5]]);
+        blake2s_mix(vs+3, vs+7, vs+11, vs+15, chunk[blake2_s[i][6]], chunk[blake2_s[i][7]]);
+
+        blake2s_mix(vs+0, vs+5, vs+10, vs+15, chunk[blake2_s[i][ 8]], chunk[blake2_s[i][ 9]]);
+        blake2s_mix(vs+1, vs+6, vs+11, vs+12, chunk[blake2_s[i][10]], chunk[blake2_s[i][11]]);
+        blake2s_mix(vs+2, vs+7, vs+ 8, vs+13, chunk[blake2_s[i][12]], chunk[blake2_s[i][13]]);
+        blake2s_mix(vs+3, vs+4, vs+ 9, vs+14, chunk[blake2_s[i][14]], chunk[blake2_s[i][15]]);
+    }
+
+    apply_to(hs, 8, vs[macroi  ] ^);
+    apply_to(hs, 8, vs[macroi+8] ^);
 }
 
 static void blake2b_compress(uint64_t* hs, uint64_t* chunk, size_t comped, bool islast) {
@@ -906,19 +943,47 @@ static void blake2b_compress(uint64_t* hs, uint64_t* chunk, size_t comped, bool 
     if (islast) vs[14] = ~vs[14];
 
     for (size_t i = 0; i < 12; i++) {
-        blake2b_mix(vs+0, vs+4, vs+ 8, vs+12, chunk[blake2b_s[i][0]], chunk[blake2b_s[i][1]]);
-        blake2b_mix(vs+1, vs+5, vs+ 9, vs+13, chunk[blake2b_s[i][2]], chunk[blake2b_s[i][3]]);
-        blake2b_mix(vs+2, vs+6, vs+10, vs+14, chunk[blake2b_s[i][4]], chunk[blake2b_s[i][5]]);
-        blake2b_mix(vs+3, vs+7, vs+11, vs+15, chunk[blake2b_s[i][6]], chunk[blake2b_s[i][7]]);
+        blake2b_mix(vs+0, vs+4, vs+ 8, vs+12, chunk[blake2_s[i][0]], chunk[blake2_s[i][1]]);
+        blake2b_mix(vs+1, vs+5, vs+ 9, vs+13, chunk[blake2_s[i][2]], chunk[blake2_s[i][3]]);
+        blake2b_mix(vs+2, vs+6, vs+10, vs+14, chunk[blake2_s[i][4]], chunk[blake2_s[i][5]]);
+        blake2b_mix(vs+3, vs+7, vs+11, vs+15, chunk[blake2_s[i][6]], chunk[blake2_s[i][7]]);
 
-        blake2b_mix(vs+0, vs+5, vs+10, vs+15, chunk[blake2b_s[i][ 8]], chunk[blake2b_s[i][ 9]]);
-        blake2b_mix(vs+1, vs+6, vs+11, vs+12, chunk[blake2b_s[i][10]], chunk[blake2b_s[i][11]]);
-        blake2b_mix(vs+2, vs+7, vs+ 8, vs+13, chunk[blake2b_s[i][12]], chunk[blake2b_s[i][13]]);
-        blake2b_mix(vs+3, vs+4, vs+ 9, vs+14, chunk[blake2b_s[i][14]], chunk[blake2b_s[i][15]]);
+        blake2b_mix(vs+0, vs+5, vs+10, vs+15, chunk[blake2_s[i][ 8]], chunk[blake2_s[i][ 9]]);
+        blake2b_mix(vs+1, vs+6, vs+11, vs+12, chunk[blake2_s[i][10]], chunk[blake2_s[i][11]]);
+        blake2b_mix(vs+2, vs+7, vs+ 8, vs+13, chunk[blake2_s[i][12]], chunk[blake2_s[i][13]]);
+        blake2b_mix(vs+3, vs+4, vs+ 9, vs+14, chunk[blake2_s[i][14]], chunk[blake2_s[i][15]]);
     }
 
     apply_to(hs, 8, vs[macroi  ] ^);
     apply_to(hs, 8, vs[macroi+8] ^);
+}
+
+static void blake2s_alg(stm_t* stm, chl_byte_span_t key, void* hash, uint32_t hbl) {
+    chl_512bit_t keyblock = {0};
+    stm_t kstm = {0};
+    uint32_t hs[8] = {
+        0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
+        0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
+    };
+
+    if (key.count > 32) key.count = 32;
+    hs[0] ^= 0x01010000 | (uint32_t)key.count << 8 | hbl;
+
+    if (key.count > 0) {
+        memcpy(keyblock.array, key.data, key.count);
+        stm_init_span(kstm, keyblock.array, sizeof keyblock);
+        stm->prev = &kstm;
+    }
+
+    size_t compressed = 0; do {
+        uint32_t w[16] = {0};
+        compressed += stm_read_block(stm, w, sizeof w);
+        apply_to(w, 16, le32);
+        blake2s_compress(hs, w, compressed, !stm_has(stm));
+    } while (stm_has(stm));
+
+    apply_to(hs, 8, le32);
+    memcpy(hash, hs, hbl);
 }
 
 static void blake2b_alg(stm_t* stm, chl_byte_span_t key, void* hash, uint64_t hbl) {
@@ -949,13 +1014,14 @@ static void blake2b_alg(stm_t* stm, chl_byte_span_t key, void* hash, uint64_t hb
     memcpy(hash, hs, hbl);
 }
 
-// Definition BLAKE2b
-#define DO(bits) \
-CHLN_RET_T_EXP(blake2b_##bits) CHLN_FUNC_EXP(blake2b_##bits, base)( \
-    stm_t* stm, CHLN_KEY_T_EXP(blake2b_##bits) key) {               \
-    CHLN_RET_T_EXP(blake2b_##bits) hash = {0};                      \
-    blake2b_alg(stm, key, hash.array, sizeof hash);                 \
+// Definition BLAKE2
+#define DO(l, b) \
+CHLN_RET_T_EXP(blake2##l##_##b) CHLN_FUNC_EXP(blake2##l##_##b, base)( \
+    stm_t* stm, CHLN_KEY_T_EXP(blake2##l##_##b) key) {  \
+    CHLN_RET_T_EXP(blake2##l##_##b) hash = {0};         \
+    blake2##l##_alg(stm, key, hash.array, sizeof hash); \
     return hash; \
 }
-DO(224) DO(256) DO(384) DO(512)
+DO(s, 128) DO(s, 160) DO(s, 224) DO(s, 256)
+DO(b, 224) DO(b, 256) DO(b, 384) DO(b, 512)
 #undef DO
