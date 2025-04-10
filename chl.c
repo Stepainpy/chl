@@ -369,6 +369,8 @@ chl_sha1_ret_t chl_sha1_base(stm_t* stm) {
     return hash;
 }
 
+/* Begin SHA2 */
+
 static void sha2_small_alg(stm_t* stm, uint32_t* hs, uint8_t* hash, size_t take) {
     obs_init;
     while (obs_has_block(stm)) {
@@ -501,6 +503,10 @@ chl_sha2_512_256_ret_t chl_sha2_512_256_base(stm_t* stm) {
     sha2_big_alg(stm, hs, hash.array, 4);
     return hash;
 }
+
+/* End SHA2 */
+
+/* Begin RIPEMD */
 
 #define ripemd_lentf(u64) le64(le32(u64 >> 32) | le32(u64 & UINT32_MAX))
 
@@ -640,6 +646,8 @@ chl_ripemd_256_ret_t chl_ripemd_256_base(stm_t* stm) {
     memcpy(hash.array, hs, sizeof hs);
     return hash;
 }
+
+/* End RIPEMD */
 
 static void siphash_2_4_round(uint64_t* vs) {
     vs[0] += vs[1]; vs[2] += vs[3];
