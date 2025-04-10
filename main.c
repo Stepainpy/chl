@@ -22,8 +22,12 @@ chl_key_t key = {"", 0};
 /* result is integer */
 #define FMT "%016llx"
 #define puth(rem, hr) printf(rem": "FMT"\n", hr)
+#define FORLOOP for (size_t i = sz; i --> 0;)
+#define CORR_I  sz - i - 1
 #else
 /* result is array */
+#define FORLOOP for (size_t i = 0; i < sz; i++)
+#define CORR_I  i
 #define puth(rem, hr) do { \
     printf(rem": "); \
     memdump((hr).array, \
@@ -44,10 +48,11 @@ uint8_t hexd2nib(char nib) {
 void check_hash(chl_ret_t* got) {
     const size_t sz = sizeof *got;
     uint8_t corp[sizeof *got] = {0};
-    for (size_t i = 0; i < sz; i++)
-        corp[i] =
-            hexd2nib(CORRECT_HASH[2 * i]) << 4 |
-            hexd2nib(CORRECT_HASH[2 * i + 1]);
+
+    FORLOOP { corp[CORR_I] =
+        hexd2nib(CORRECT_HASH[2 * i]) << 4 |
+        hexd2nib(CORRECT_HASH[2 * i + 1]);
+    }
 
     uint8_t* cp = corp, *gp = (uint8_t*)got;
     size_t match = 0;
