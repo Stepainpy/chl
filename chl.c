@@ -752,6 +752,10 @@ static void blake2b_mix(
     *c += *d    ; *b = rotr64(*b ^ *c, 63);
 }
 
+#define blake2_G(V, vs, a, b, c, d, p, q) \
+blake2##V##_mix(vs+a, vs+b, vs+c, vs+d,   \
+    chunk[blake2_s[i][p]], chunk[blake2_s[i][q]])
+
 static void blake2s_compress(uint32_t* hs, uint32_t* chunk, size_t comped, bool islast) {
     uint32_t vs[16] = {
         hs[0], hs[1], hs[2], hs[3], hs[4], hs[5], hs[6], hs[7],
@@ -763,15 +767,15 @@ static void blake2s_compress(uint32_t* hs, uint32_t* chunk, size_t comped, bool 
     if (islast) vs[14] = ~vs[14];
 
     for (size_t i = 0; i < 10; i++) {
-        blake2s_mix(vs+0, vs+4, vs+ 8, vs+12, chunk[blake2_s[i][0]], chunk[blake2_s[i][1]]);
-        blake2s_mix(vs+1, vs+5, vs+ 9, vs+13, chunk[blake2_s[i][2]], chunk[blake2_s[i][3]]);
-        blake2s_mix(vs+2, vs+6, vs+10, vs+14, chunk[blake2_s[i][4]], chunk[blake2_s[i][5]]);
-        blake2s_mix(vs+3, vs+7, vs+11, vs+15, chunk[blake2_s[i][6]], chunk[blake2_s[i][7]]);
+        blake2_G(s, vs, 0, 4,  8, 12,  0,  1);
+        blake2_G(s, vs, 1, 5,  9, 13,  2,  3);
+        blake2_G(s, vs, 2, 6, 10, 14,  4,  5);
+        blake2_G(s, vs, 3, 7, 11, 15,  6,  7);
 
-        blake2s_mix(vs+0, vs+5, vs+10, vs+15, chunk[blake2_s[i][ 8]], chunk[blake2_s[i][ 9]]);
-        blake2s_mix(vs+1, vs+6, vs+11, vs+12, chunk[blake2_s[i][10]], chunk[blake2_s[i][11]]);
-        blake2s_mix(vs+2, vs+7, vs+ 8, vs+13, chunk[blake2_s[i][12]], chunk[blake2_s[i][13]]);
-        blake2s_mix(vs+3, vs+4, vs+ 9, vs+14, chunk[blake2_s[i][14]], chunk[blake2_s[i][15]]);
+        blake2_G(s, vs, 0, 5, 10, 15,  8,  9);
+        blake2_G(s, vs, 1, 6, 11, 12, 10, 11);
+        blake2_G(s, vs, 2, 7,  8, 13, 12, 13);
+        blake2_G(s, vs, 3, 4,  9, 14, 14, 15);
     }
 
     apply_to(hs, 8, vs[macroi  ] ^);
@@ -789,15 +793,15 @@ static void blake2b_compress(uint64_t* hs, uint64_t* chunk, size_t comped, bool 
     if (islast) vs[14] = ~vs[14];
 
     for (size_t i = 0; i < 12; i++) {
-        blake2b_mix(vs+0, vs+4, vs+ 8, vs+12, chunk[blake2_s[i][0]], chunk[blake2_s[i][1]]);
-        blake2b_mix(vs+1, vs+5, vs+ 9, vs+13, chunk[blake2_s[i][2]], chunk[blake2_s[i][3]]);
-        blake2b_mix(vs+2, vs+6, vs+10, vs+14, chunk[blake2_s[i][4]], chunk[blake2_s[i][5]]);
-        blake2b_mix(vs+3, vs+7, vs+11, vs+15, chunk[blake2_s[i][6]], chunk[blake2_s[i][7]]);
+        blake2_G(b, vs, 0, 4,  8, 12,  0,  1);
+        blake2_G(b, vs, 1, 5,  9, 13,  2,  3);
+        blake2_G(b, vs, 2, 6, 10, 14,  4,  5);
+        blake2_G(b, vs, 3, 7, 11, 15,  6,  7);
 
-        blake2b_mix(vs+0, vs+5, vs+10, vs+15, chunk[blake2_s[i][ 8]], chunk[blake2_s[i][ 9]]);
-        blake2b_mix(vs+1, vs+6, vs+11, vs+12, chunk[blake2_s[i][10]], chunk[blake2_s[i][11]]);
-        blake2b_mix(vs+2, vs+7, vs+ 8, vs+13, chunk[blake2_s[i][12]], chunk[blake2_s[i][13]]);
-        blake2b_mix(vs+3, vs+4, vs+ 9, vs+14, chunk[blake2_s[i][14]], chunk[blake2_s[i][15]]);
+        blake2_G(b, vs, 0, 5, 10, 15,  8,  9);
+        blake2_G(b, vs, 1, 6, 11, 12, 10, 11);
+        blake2_G(b, vs, 2, 7,  8, 13, 12, 13);
+        blake2_G(b, vs, 3, 4,  9, 14, 14, 15);
     }
 
     apply_to(hs, 8, vs[macroi  ] ^);
