@@ -1,90 +1,86 @@
-#define CHL_DEFAULT sha1
-#include <stdio.h>
-#include <stdlib.h>
 #include "chl.h"
+#include <string.h>
+#include <stdbool.h>
 
-void memdump(const void* src, size_t count, FILE* file) {
+__attribute__((unused)) static void memdump(
+    const void* src, size_t count, FILE* file, bool rev) {
     const uint8_t* p = (const uint8_t*)src;
-    while (count --> 0) fprintf(file, "%02x", *p++);
-}
-
-#define CORRECT_HASH "2fd4e1c67a2d28fced849ee1bb76e7391b93eb12"
-#if 0
-/* has key argument */
-chl_key_t key = {"", 0};
-// chl_key_t key = {"The secret kword", 16};
-#define KEY , key
-#else
-#define KEY
-#endif
-
-#if 0
-/* result is integer */
-#define FMT "%016llx"
-#define puth(rem, hr) printf(rem": "FMT"\n", hr)
-#define FORLOOP for (size_t i = sz; i --> 0;)
-#define CORR_I  sz - i - 1
-#else
-/* result is array */
-#define FORLOOP for (size_t i = 0; i < sz; i++)
-#define CORR_I  i
-#define puth(rem, hr) do { \
-    printf(rem": "); \
-    memdump((hr).array, \
-        sizeof (hr).array, \
-        stdout); \
-    putchar('\n'); \
-} while (0);
-#endif
-
-uint8_t hexd2nib(char nib) {
-    if ('0' <= nib && nib <= '9')
-        return nib - '0';
-    if ('a' <= nib && nib <= 'f')
-        return nib - 'a' + 10;
-    return 0;
-}
-
-void check_hash(chl_ret_t* got) {
-    const size_t sz = sizeof *got;
-    uint8_t corp[sizeof *got] = {0};
-
-    FORLOOP { corp[CORR_I] =
-        hexd2nib(CORRECT_HASH[2 * i]) << 4 |
-        hexd2nib(CORRECT_HASH[2 * i + 1]);
+    if (rev) {
+        p += count;
+        while (count --> 0) fprintf(file, "%02x", *--p);
+    } else {
+        while (count --> 0) fprintf(file, "%02x", *p++);
     }
-
-    uint8_t* cp = corp, *gp = (uint8_t*)got;
-    size_t match = 0;
-    for (size_t i = 0; i < sz; i++)
-        if (*cp++ == *gp++) ++match;
-
-    if (match == sz)
-        printf("\x1b[32mFull match\x1b[0m (%zu/%zu)\n", sz, sz);
-    else
-        printf("\x1b[31mIncomplete match\x1b[0m (%zu/%zu)\n", match, sz);
 }
+
+__attribute__((unused)) static void memdumps(
+    const void* src, size_t count, char* str, bool rev) {
+    const uint8_t* p = (const uint8_t*)src;
+    if (rev) {
+        p += count;
+        while (count --> 0) {
+            sprintf(str, "%02x", *--p);
+            str += 2;
+        }
+    } else {
+        while (count --> 0) {
+            sprintf(str, "%02x", *p++);
+            str += 2;
+        }
+    }
+}
+
+#define COMMA ,
+#define SELECT_3(_1, _2, _3, x, ...) x
+#define HASTHREE(...) SELECT_3(__VA_ARGS__, 1, 0, 0, 0)
+
+#define IF0(...)
+#define IF1(...) __VA_ARGS__
+#define IFc(c, ...) IF##c(__VA_ARGS__)
+#define IF(c, ...) IFc(c, __VA_ARGS__)
 
 int main(void) {
-    FILE* fd = fopen("text.txt", "rb");
-    if (!fd) return 1;
+    FILE* textf = fopen("text.txt", "rb");
+    if (!textf) return 1;
 
-    fseek(fd, 0, SEEK_END);
-    const size_t flen = ftell(fd);
-    fseek(fd, 0, SEEK_SET);
+// Create hashes
+#if 0
+#define DO(name, ...) do {                                       \
+    fputs("Create "#name" hash ... ", stdout);                   \
+    FILE* fd = fopen("hash/"#name".txt", "wb");                  \
+    if (!fd) { printf("error\n"); break; } rewind(textf);        \
+    CHLN_RET_T(name) hash = CHLN_FUNC(name, calc_file)(textf     \
+        IF(HASTHREE(__VA_ARGS__), COMMA (CHLN_KEY_T(name)){0})); \
+    memdump((void*)&hash, sizeof hash, fd, sizeof hash <= 8);    \
+    puts("\x1b[32mok\x1b[0m"); fclose(fd);                       \
+} while (0);
+    CHL_LIST_OF_NAMES
+    CHL_LIST_OF_NAMES_WITH_KEY
+#undef DO
+#endif
 
-    char* buffer = malloc(flen);
-    fread(buffer, 1, flen, fd);
-    rewind(fd);
+// Check hashes
+#if 1
+#define DO(name, ...) do {                                         \
+    fputs("Check "#name" hash ... ", stdout);                      \
+    FILE* fd = fopen("hash/"#name".txt", "rb");                    \
+    if (!fd) { puts("\x1b[34mnot found\x1b[0m"); break; }          \
+    rewind(textf);                                                 \
+    CHLN_RET_T(name) hash = CHLN_FUNC(name, calc_file)(textf       \
+        IF(HASTHREE(__VA_ARGS__), COMMA (CHLN_KEY_T(name)){0}));   \
+    char buffer [sizeof hash * 2 + 1] = {0};                       \
+    char correct[sizeof hash * 2 + 1] = {0};                       \
+    fread(correct, sizeof hash * 2, 1, fd); fclose(fd);            \
+    memdumps((void*)&hash, sizeof hash, buffer, sizeof hash <= 8); \
+    if (strcmp(correct, buffer) == 0) puts("\x1b[32mok\x1b[0m");   \
+    else { puts("\x1b[31mmistmatch\x1b[0m");                       \
+        printf("  \x1b[33mexpected\x1b[0m %s\n", correct);         \
+        printf("  \x1b[33mreceived\x1b[0m %s\n", buffer);}         \
+} while (0);
+    CHL_LIST_OF_NAMES
+    CHL_LIST_OF_NAMES_WITH_KEY
+#undef DO
+#endif
 
-    chl_ret_t span_hash = chl_calc_span(buffer, flen KEY);
-    chl_ret_t file_hash = chl_calc_file(fd KEY);
-
-    puts("test: "CORRECT_HASH);
-    puth("span", span_hash);
-    puth("file", file_hash);
-    check_hash(&span_hash);
-
-    free(buffer);
-    fclose(fd);
+    fclose(textf);
 }
