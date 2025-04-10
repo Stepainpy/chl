@@ -97,12 +97,6 @@ static inline uint64_t rev_bytes_64(uint64_t x) {
 #  define be64(x) ((uint64_t)(x))
 #endif
 
-#ifdef __GNUC__
-#define MAYBE_UNUSED __attribute__((unused))
-#else
-#define MAYBE_UNUSED
-#endif
-
 #define apply_to(arr, size, op) \
 for (size_t macroi = 0; macroi < size; macroi++) \
     (arr)[macroi] = op((arr)[macroi])
@@ -132,31 +126,6 @@ static inline uint32_t rotl32(uint32_t n, int s) { return n << s | n >> (32 - s)
 static inline uint32_t rotr32(uint32_t n, int s) { return n >> s | n << (32 - s); }
 static inline uint64_t rotl64(uint64_t n, int s) { return n << s | n >> (64 - s); }
 static inline uint64_t rotr64(uint64_t n, int s) { return n >> s | n << (64 - s); }
-
-/* Extended math */
-
-static void add_256bit(chl_256bit_t* a, const chl_256bit_t* b) {
-    uint64_t* a64 = (uint64_t*)a->array;
-    uint64_t* b64 = (uint64_t*)b->array;
-    bool carry = false;
-
-    for (size_t i = 0; i < 4; i++) {
-        uint64_t c = a64[i] + b64[i] + carry;
-        carry = carry ? c <= a64[i] : c < a64[i];
-        a64[i] = c;
-    }
-}
-
-// XOR's
-#define DO(bits) \
-MAYBE_UNUSED static void xor_ ## bits ## bit( \
-    CHL_BITS_NAME(bits)* c, \
-    const CHL_BITS_NAME(bits)* a, \
-    const CHL_BITS_NAME(bits)* b) { \
-    for (size_t i = 0; i < sizeof c->array; i++) \
-        c->array[i] = a->array[i] ^ b->array[i]; }
-CHL_LIST_OF_BITS
-#undef DO
 
 /* Defining `calc_span` and `calc_file` as versions of `base` */
 
@@ -357,129 +326,6 @@ chl_md5_ret_t chl_md5_base(stm_t* stm) {
     memcpy(hash.array, hs, sizeof hash);
     return hash;
 }
-
-/* WIP gost hash begin */
-
-static const chl_256bit_t gost_C3 = {{
-    0x00, 0xff, 0x00, 0xff, 0x00, 0xff, 0x00, 0xff,
-    0xff, 0x00, 0xff, 0x00, 0xff, 0x00, 0xff, 0x00,
-    0x00, 0xff, 0xff, 0x00, 0xff, 0x00, 0x00, 0xff,
-    0xff, 0x00, 0x00, 0x00, 0xff, 0xff, 0x00, 0xff
-}};
-
-static chl_256bit_t gost_A(chl_256bit_t blk) {
-    chl_256bit_t out = {0};
-    uint64_t* outp64 = (uint64_t*)out.array;
-    uint64_t* blkp64 = (uint64_t*)blk.array;
-
-    outp64[0] = blkp64[1];
-    outp64[1] = blkp64[2];
-    outp64[2] = blkp64[3];
-    outp64[3] = blkp64[0] ^ blkp64[1];
-
-    return out;
-}
-
-static chl_256bit_t gost_P(chl_256bit_t blk) {
-    chl_256bit_t out = {0};
-    for (size_t i = 0; i < 4; i++)
-        for (size_t k = 0; k < 8; k++)
-            out.array[i + 4 * k] = blk.array[8 * i + k];
-    return out;
-}
-
-static chl_256bit_t gost_psy(chl_256bit_t b) {
-    uint16_t* p16 = (uint16_t*)b.array;
-    uint16_t xored =
-        p16[0] ^ p16[ 1] ^ p16[ 2] ^
-        p16[3] ^ p16[12] ^ p16[15];
-    memmove(p16, p16 + 1, 30);
-    p16[15] = xored;
-    return b;
-}
-
-static uint64_t gost_encrypt(uint64_t blk, chl_256bit_t key) {
-    union { uint32_t L, R; uint64_t v; } b; b.v = blk;
-    uint32_t* k32 = (uint32_t*)key.array;
-
-    for (size_t i = 0; i < 32; i++) {
-        uint32_t t = b.R + k32[i/4];
-        t =   (uint32_t)gost_sbox_0[t >> 24 & 255] << 24
-            | (uint32_t)gost_sbox_1[t >> 16 & 255] << 16
-            | (uint32_t)gost_sbox_2[t >>  8 & 255] <<  8
-            | (uint32_t)gost_sbox_3[t       & 255];
-        b.L ^= rotl32(t, 11);
-        uint32_t oldR = b.R;
-        b.R = b.L;
-        b.L = oldR;
-    }
-
-    return b.v;
-}
-
-static void gost_f(chl_256bit_t* hin, chl_256bit_t* mi) {
-    chl_256bit_t U, V, W, K1, K2, K3, K4;
-    U = *hin; V = *mi;
-    xor_256bit(&W, &U, &V);
-    K1 = gost_P(W);
-
-    U = gost_A(U);
-    V = gost_A(gost_A(V));
-    xor_256bit(&W, &U, &V);
-    K2 = gost_P(W);
-
-    chl_256bit_t tmp = gost_A(U);
-    xor_256bit(&U, &tmp, &gost_C3);
-    V = gost_A(gost_A(V));
-    xor_256bit(&W, &U, &V);
-    K3 = gost_P(W);
-
-    U = gost_A(U);
-    V = gost_A(gost_A(V));
-    xor_256bit(&W, &U, &V);
-    K4 = gost_P(W);
-
-    chl_256bit_t S = *hin;
-    uint64_t* Sp64 = (uint64_t*)S.array;
-    Sp64[0] = gost_encrypt(Sp64[0], K1);
-    Sp64[1] = gost_encrypt(Sp64[1], K2);
-    Sp64[2] = gost_encrypt(Sp64[2], K3);
-    Sp64[3] = gost_encrypt(Sp64[3], K4);
-
-    for (size_t i = 0; i < 12; i++)
-        S = gost_psy(S);
-    xor_256bit(&S, mi, &S);
-    S = gost_psy(S);
-    xor_256bit(&S, hin, &S);
-    for (size_t i = 0; i < 61; i++)
-        S = gost_psy(S);
-    
-    *hin = S;
-}
-
-chl_gost_ret_t chl_gost_base(stm_t* stm) {
-    chl_256bit_t hash = {0}, sum = {0};
-    uint64_t length = 0;
-
-    while (stm_has(stm)) {
-        chl_256bit_t m = {0};
-        size_t rdlen = stm_read_block(stm, m.array, sizeof m);
-
-        gost_f(&hash, &m);
-        add_256bit(&sum, &m);
-        length += rdlen < sizeof m ? rdlen * 8 : 256;
-    }
-
-    chl_256bit_t len_blk = {0};
-    length = le64(length);
-    memcpy(len_blk.array, &length, sizeof length);
-    gost_f(&hash, &len_blk);
-    gost_f(&hash, &sum);
-
-    return hash;
-}
-
-/* WIP gost hash end */
 
 chl_sha1_ret_t chl_sha1_base(stm_t* stm) {
     uint32_t hs[5] = {
